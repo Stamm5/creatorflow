@@ -2,6 +2,17 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 
+// ─── MOBILE HOOK ─────────────────────────────────────────────────────────────
+function useW(){
+  const [w,setW]=useState(window.innerWidth);
+  useEffect(()=>{
+    const h=()=>setW(window.innerWidth);
+    window.addEventListener("resize",h);
+    return()=>window.removeEventListener("resize",h);
+  },[]);
+  return w;
+}
+
 // ─── SUPABASE CLIENT ──────────────────────────────────────────────────────────
 const SUPA_URL = "https://licexdddqvuxovihyhvg.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpY2V4ZGRkcXZ1eG92aWh5aHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NzczNjksImV4cCI6MjA5MDA1MzM2OX0.5PhmGrfmx5oUYOWZimpOAY-xyTBSO-FBGT9soguZ1UI";
@@ -1582,6 +1593,7 @@ function LoginPage({dark,onLogin,onSignUp,onGuest,t}){
 
 // ─── LANDING PAGE ─────────────────────────────────────────────────────────────
 function LandingPage({dark,onEnter,t}){
+  const w=useW();
   const features=[
     {icon:"📊",title:"Unified Dashboard",desc:"All your income streams in one clean view. Stop logging into 10 different dashboards every month."},
     {icon:"🤖",title:"AI-Powered Import",desc:"Drop a screenshot or paste earnings text from any platform. AI reads and logs everything automatically."},
