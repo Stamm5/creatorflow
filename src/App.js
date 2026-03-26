@@ -59,40 +59,156 @@ const PLATFORMS = [
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
+// State income tax rates — 2025 top marginal rates (Tax Foundation, IRS, TurboTax)
+// Note: For flat-rate states the top rate = flat rate. For progressive states,
+// we apply the top marginal rate to income above the standard deduction as an
+// approximation (shown in UI as "top marginal" with disclaimer). This is
+// conservative — actual effective rate will be lower for most incomes.
 const STATE_TAXES = {
-  "Alabama":5.0,"Alaska":0,"Arizona":2.5,"Arkansas":4.4,"California":9.3,
-  "Colorado":4.4,"Connecticut":5.0,"Delaware":5.55,"Florida":0,"Georgia":5.49,
-  "Hawaii":8.25,"Idaho":5.8,"Illinois":4.95,"Indiana":3.05,"Iowa":4.82,
-  "Kansas":5.7,"Kentucky":4.0,"Louisiana":4.25,"Maine":6.75,"Maryland":5.0,
-  "Massachusetts":5.0,"Michigan":4.05,"Minnesota":7.85,"Mississippi":4.7,
-  "Missouri":4.95,"Montana":6.75,"Nebraska":5.84,"Nevada":0,"New Hampshire":0,
-  "New Jersey":6.37,"New Mexico":4.9,"New York":6.85,"North Carolina":4.5,
-  "North Dakota":2.5,"Ohio":3.99,"Oklahoma":4.75,"Oregon":8.75,
-  "Pennsylvania":3.07,"Rhode Island":5.99,"South Carolina":6.4,"South Dakota":0,
-  "Tennessee":0,"Texas":0,"Utah":4.55,"Vermont":6.6,"Virginia":5.75,
-  "Washington":0,"West Virginia":5.12,"Wisconsin":5.3,"Wyoming":0,
-  "District of Columbia":8.5,
+  "Alabama":5.0,       // top marginal (progressive)
+  "Alaska":0,          // no state income tax
+  "Arizona":2.5,       // flat rate
+  "Arkansas":4.4,      // top marginal (reduced 2024)
+  "California":13.3,   // 12.3% + 1% millionaire surcharge; 13.3% top marginal
+  "Colorado":4.4,      // flat rate
+  "Connecticut":6.99,  // top marginal
+  "Delaware":6.6,      // top marginal
+  "Florida":0,         // no state income tax
+  "Georgia":5.49,      // flat rate (phasing down)
+  "Hawaii":11.0,       // top marginal (one of highest in US)
+  "Idaho":5.8,         // top marginal
+  "Illinois":4.95,     // flat rate
+  "Indiana":3.15,      // flat rate (updated 2024)
+  "Iowa":5.7,          // top marginal (phasing down)
+  "Kansas":5.7,        // top marginal
+  "Kentucky":4.0,      // flat rate
+  "Louisiana":4.25,    // top marginal
+  "Maine":7.15,        // top marginal
+  "Maryland":5.75,     // top marginal (state only, counties add local)
+  "Massachusetts":9.0, // 5% flat + 4% surtax on income over $1M; use 9% as top
+  "Michigan":4.25,     // flat rate
+  "Minnesota":9.85,    // top marginal
+  "Mississippi":4.7,   // top marginal (phasing down)
+  "Missouri":4.95,     // top marginal (reduced 2024)
+  "Montana":5.9,       // top marginal (reduced 2024)
+  "Nebraska":5.2,      // top marginal (phasing down)
+  "Nevada":0,          // no state income tax
+  "New Hampshire":0,   // no income tax on wages (repealed 2025)
+  "New Jersey":10.75,  // top marginal (over $1M)
+  "New Mexico":5.9,    // top marginal
+  "New York":10.9,     // top marginal (over $25M adds more)
+  "North Carolina":4.5,// flat rate
+  "North Dakota":2.5,  // top marginal
+  "Ohio":3.5,          // top marginal (reduced; under $26k exempt)
+  "Oklahoma":4.75,     // top marginal
+  "Oregon":9.9,        // top marginal
+  "Pennsylvania":3.07, // flat rate
+  "Rhode Island":5.99, // top marginal
+  "South Carolina":6.2,// top marginal (phasing down)
+  "South Dakota":0,    // no state income tax
+  "Tennessee":0,       // no state income tax on wages
+  "Texas":0,           // no state income tax
+  "Utah":4.55,         // flat rate
+  "Vermont":6.75,      // top marginal
+  "Virginia":5.75,     // top marginal
+  "Washington":0,      // no income tax on wages
+  "West Virginia":5.12,// top marginal (phasing down)
+  "Wisconsin":7.65,    // top marginal
+  "Wyoming":0,         // no state income tax
+  "District of Columbia":10.75, // top marginal (over $1M)
 };
 
-const FED_S=[{min:0,max:11600,r:.10},{min:11600,max:47150,r:.12},{min:47150,max:100525,r:.22},{min:100525,max:191950,r:.24},{min:191950,max:243725,r:.32},{min:243725,max:609350,r:.35},{min:609350,max:Infinity,r:.37}];
-const FED_M=[{min:0,max:23200,r:.10},{min:23200,max:94300,r:.12},{min:94300,max:201050,r:.22},{min:201050,max:383900,r:.24},{min:383900,max:487450,r:.32},{min:487450,max:731200,r:.35},{min:731200,max:Infinity,r:.37}];
-const STD={single:14600,mfj:29200,hoh:21900};
+// 2025 Federal Tax Brackets — IRS Rev. Proc. 2024-40
+const FED_S=[
+  {min:0,      max:11925,  r:.10},
+  {min:11925,  max:48475,  r:.12},
+  {min:48475,  max:103350, r:.22},
+  {min:103350, max:197300, r:.24},
+  {min:197300, max:250525, r:.32},
+  {min:250525, max:626350, r:.35},
+  {min:626350, max:Infinity,r:.37},
+];
+const FED_M=[
+  {min:0,      max:23850,  r:.10},
+  {min:23850,  max:96950,  r:.12},
+  {min:96950,  max:206700, r:.22},
+  {min:206700, max:394600, r:.24},
+  {min:394600, max:501050, r:.32},
+  {min:501050, max:751600, r:.35},
+  {min:751600, max:Infinity,r:.37},
+];
+const FED_HOH=[
+  {min:0,      max:17000,  r:.10},
+  {min:17000,  max:64850,  r:.12},
+  {min:64850,  max:103350, r:.22},
+  {min:103350, max:197300, r:.24},
+  {min:197300, max:250500, r:.32},
+  {min:250500, max:626350, r:.35},
+  {min:626350, max:Infinity,r:.37},
+];
+// 2025 Standard deductions — IRS Publication 505
+const STD={single:15000,mfj:30000,hoh:22500};
 const FILING={single:"Single",mfj:"Married Filing Jointly",hoh:"Head of Household"};
-const QDATES=[{q:"Q1",due:"April 15",period:"Jan–Mar"},{q:"Q2",due:"June 17",period:"Apr–May"},{q:"Q3",due:"Sept 16",period:"Jun–Aug"},{q:"Q4",due:"Jan 15, 2026",period:"Sep–Dec"}];
+// 2025 estimated tax due dates (IRS)
+const QDATES=[{q:"Q1",due:"April 15, 2025",period:"Jan–Mar 2025"},{q:"Q2",due:"June 16, 2025",period:"Apr–May 2025"},{q:"Q3",due:"Sept 15, 2025",period:"Jun–Aug 2025"},{q:"Q4",due:"Jan 15, 2026",period:"Sep–Dec 2025"}];
 
+// ── Federal tax using progressive brackets ────────────────────────────────
 function fedTax(inc,status){
-  const b=status==="mfj"?FED_M:FED_S; let t=0;
-  for(const br of b){if(inc<=br.min)break; t+=(Math.min(inc,br.max)-br.min)*br.r;}
+  const b=status==="mfj"?FED_M:status==="hoh"?FED_HOH:FED_S;
+  let t=0;
+  for(const br of b){
+    if(inc<=br.min) break;
+    t+=(Math.min(inc,br.max)-br.min)*br.r;
+  }
   return t;
 }
+
+// ── Main tax calculation ──────────────────────────────────────────────────
 function calcTaxes({gross,status,state,ded}){
-  const netSE=gross*.9235, ss=Math.min(netSE,168600)*.124, med=netSE*.029, se=ss+med, seDed=se/2;
-  const std=status==="mfj"?STD.mfj:status==="hoh"?STD.hoh:STD.single;
-  const total=std+seDed+(ded||0), fedInc=Math.max(0,gross-total);
-  const fed=fedTax(fedInc,status), stTax=Math.max(0,gross-std)*(STATE_TAXES[state]||0)/100;
-  const allTax=fed+se+stTax, eff=gross>0?(allTax/gross)*100:0;
-  return{fed,se,stTax,allTax,eff,home:gross-allTax,qtr:allTax/4,std,seDed,fedInc};
+  // Self-employment tax (Schedule SE)
+  // 2025 SS wage base: $176,100
+  const netSE = gross * 0.9235;
+  const ss    = Math.min(netSE, 176100) * 0.124;  // Social Security (12.4%)
+  const med   = netSE * 0.029;                      // Medicare base (2.9%)
+  // Additional Medicare Tax: 0.9% on SE income above $200k (single/HOH) or $250k (MFJ)
+  const addlMedThresh = status==="mfj" ? 250000 : 200000;
+  const addlMed = Math.max(0, netSE - addlMedThresh) * 0.009;
+  const se    = ss + med + addlMed;
+  const seDed = se / 2; // Half of SE tax is deductible
+
+  // Standard deduction
+  const std = status==="mfj" ? STD.mfj : status==="hoh" ? STD.hoh : STD.single;
+
+  // Federal taxable income
+  const totalDed = std + seDed + (ded||0);
+  const fedInc   = Math.max(0, gross - totalDed);
+  const fed      = fedTax(fedInc, status);
+
+  // State tax — applied to gross minus standard deduction (conservative estimate)
+  // For states with flat rates this is accurate. For progressive states this
+  // uses the top marginal rate which may overestimate for lower incomes.
+  const stBase = Math.max(0, gross - std);
+  const stTax  = stBase * (STATE_TAXES[state]||0) / 100;
+
+  const allTax = fed + se + stTax;
+  const eff    = gross > 0 ? (allTax / gross) * 100 : 0;
+
+  return {
+    fed, se, stTax, allTax, eff,
+    home: gross - allTax,
+    qtr:  allTax / 4,
+    std, seDed, fedInc,
+    gross, // include for reference
+    addlMed, // additional medicare for display
+  };
 }
+
+// ─── PLANS ───────────────────────────────────────────────────────────────────────
+const PLANS = {
+  free:     { name:"Free",     price:0,   period:"",    platformLimit:1,  color:"#60607a", badge:"FREE"     },
+  pro:      { name:"Gold",     price:12,  period:"/mo", platformLimit:5,  color:"#f5a623", badge:"GOLD"    },
+  business: { name:"Platinum", price:29,  period:"/mo", platformLimit:Infinity, color:"#a259ff", badge:"PLATINUM" },
+};
 
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
 const SEED=[
@@ -358,7 +474,7 @@ function StatePicker({value,onChange,t}){
 }
 
 // ─── DASHBOARD TAB ────────────────────────────────────────────────────────────
-function MonthlyDetailTab({entries,setEntries,dark,selMonth,setSelMonth,selYear,userProfile,addEntry,deleteEntry}){
+function MonthlyDetailTab({entries,setEntries,dark,selMonth,setSelMonth,selYear,userProfile,addEntry,deleteEntry,plan="free",onUpgrade}){
   const t=T(dark);
   const w=useW();
   const [animIn,setAnimIn]=useState(false);
@@ -598,16 +714,32 @@ function MonthlyDetailTab({entries,setEntries,dark,selMonth,setSelMonth,selYear,
                 <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"6px"}}>NOTE (optional)</div>
                 <input value={form.note} onChange={e=>setForm({...form,note:e.target.value})} placeholder="Ad revenue, brand deal…" style={inp}/>
               </div>
-              <button className="btn" onClick={async()=>{
-                if(!form.amount||isNaN(form.amount))return;
-                const newEntry={id:Date.now(),platform:form.platform,amount:parseFloat(form.amount),month:selMonth,year:activeYear,note:form.note};
-                if(addEntry) await addEntry(newEntry);
-                else setEntries(p=>[...p,newEntry]);
-                setForm({platform:"YouTube",amount:"",note:""});
-                setShowForm(false);
-              }} style={{background:t.acc,color:"#fff",padding:"12px",fontSize:"14px",fontWeight:700,borderRadius:"10px",width:"100%"}}>
-                Log Income →
-              </button>
+              {(()=>{
+                const usedPlatforms=[...new Set(entries.map(e=>e.platform))];
+                const limit=PLANS[plan]?.platformLimit||1;
+                const wouldExceed=!usedPlatforms.includes(form.platform)&&usedPlatforms.length>=limit;
+                return wouldExceed?(
+                  <div style={{background:`${t.acc}10`,border:`1.5px solid ${t.acc}44`,borderRadius:"12px",padding:"14px",textAlign:"center"}}>
+                    <div style={{fontSize:"18px",marginBottom:"6px"}}>⚡</div>
+                    <div style={{fontSize:"13px",fontWeight:700,color:t.txt,marginBottom:"4px"}}>Platform limit reached</div>
+                    <div style={{fontSize:"12px",color:t.mut,marginBottom:"12px"}}>Your <strong style={{color:t.txt}}>{PLANS[plan]?.name||"Free"}</strong> plan allows {limit} platform{limit!==1?"s":""}. Upgrade to track more.</div>
+                    <button className="btn" onClick={onUpgrade} style={{background:`linear-gradient(135deg,${t.acc},#00a87a)`,color:"#fff",padding:"10px 24px",fontSize:"13px",fontWeight:700,borderRadius:"9px"}}>
+                      See Plans →
+                    </button>
+                  </div>
+                ):(
+                  <button className="btn" onClick={async()=>{
+                    if(!form.amount||isNaN(form.amount))return;
+                    const newEntry={id:Date.now(),platform:form.platform,amount:parseFloat(form.amount),month:selMonth,year:activeYear,note:form.note};
+                    if(addEntry) await addEntry(newEntry);
+                    else setEntries(p=>[...p,newEntry]);
+                    setForm({platform:"YouTube",amount:"",note:""});
+                    setShowForm(false);
+                  }} style={{background:t.acc,color:"#fff",padding:"12px",fontSize:"14px",fontWeight:700,borderRadius:"10px",width:"100%"}}>
+                    Log Income →
+                  </button>
+                );
+              })()}
             </div>
           )}
           <div style={{maxHeight:"310px",overflowY:"auto"}}>
@@ -958,10 +1090,10 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
   }
 
   // ── Live calculation — runs on every keystroke ────────────────────────────
-  const g=parseFloat(String(income).replace(/,/g,""))||0;
-  const d=parseFloat(ded)||0;
+  const g=Math.max(0,parseFloat(String(income).replace(/[^0-9.]/g,""))||0);
+  const d=Math.max(0,parseFloat(String(ded).replace(/[^0-9.]/g,""))||0);
   const res=(g>0&&userProfile.state)
-    ?calcTaxes({gross:g,status:userProfile.filingStatus,state:userProfile.state,ded:d})
+    ?{...calcTaxes({gross:g,status:userProfile.filingStatus,state:userProfile.state,ded:d}),gross:g}
     :null;
 
   // ── Donut ─────────────────────────────────────────────────────────────────
@@ -1116,24 +1248,47 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
                 </div>
               </div>
 
-              {/* 4 result cards */}
-              <div style={{display:"grid",gridTemplateColumns:w<600?"1fr 1fr":"repeat(4,1fr)",gap:"12px",marginBottom:"20px"}}>
-                {[
-                  {label:"Total Tax Due",   val:`$${Math.round(res.allTax).toLocaleString()}`, sub:`${res.eff.toFixed(1)}% effective rate`, c:t.dan,  icon:"⚠️", top:t.dan},
-                  {label:"Take Home",       val:`$${Math.round(res.home).toLocaleString()}`,   sub:"After all taxes",                       c:t.acc,  icon:"✅", top:t.acc},
-                  {label:"Set Aside Now",   val:`$${Math.round(res.allTax).toLocaleString()}`, sub:"Recommended reserve",                   c:t.wrn,  icon:"🏦", top:t.wrn},
-                  {label:"Per Quarter",     val:`$${Math.round(res.qtr).toLocaleString()}`,    sub:"Estimated payment",                     c:"#a259ff",icon:"📅",top:"#a259ff"},
-                ].map((s,i)=>(
-                  <div key={s.label} className={`fi card ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"18px",transitionDelay:`${i*.07}s`,position:"relative",overflow:"hidden"}}>
-                    <div style={{position:"absolute",top:0,left:0,right:0,height:"3px",background:`linear-gradient(90deg,${s.top},${s.top}00)`}}/>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
-                      <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase"}}>{s.label}</div>
-                      <span style={{fontSize:"16px"}}>{s.icon}</span>
-                    </div>
-                    <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"24px",fontWeight:800,color:s.c,marginBottom:"4px"}}>{s.val}</div>
-                    <div style={{fontSize:"12px",color:t.mut,fontWeight:500}}>{s.sub}</div>
+              {/* ── Hero result: Take Home + Total Tax side by side ── */}
+              <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"1fr 1fr",gap:"14px",marginBottom:"14px"}}>
+                {/* Take Home — hero green card */}
+                <div className={`fi ${animIn?"on":""}`} style={{background:`linear-gradient(135deg,${t.acc}22,${t.acc}06)`,border:`1.5px solid ${t.acc}55`,borderRadius:"20px",padding:"24px 28px",transitionDelay:"0.05s",position:"relative",overflow:"hidden"}}>
+                  <div style={{position:"absolute",top:"-30px",right:"-30px",width:"120px",height:"120px",borderRadius:"50%",background:t.acc,opacity:.07,pointerEvents:"none"}}/>
+                  <div style={{fontSize:"11px",color:t.acc,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:"10px"}}>✅ Est. Take Home</div>
+                  <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"clamp(32px,4vw,48px)",fontWeight:800,color:t.txt,lineHeight:1,marginBottom:"8px"}}>${Math.round(res.home).toLocaleString()}</div>
+                  <div style={{fontSize:"13px",color:t.mut}}>After all federal, state & SE taxes</div>
+                  <div style={{marginTop:"12px",display:"inline-flex",alignItems:"center",gap:"6px",background:`${t.acc}20`,border:`1px solid ${t.acc}44`,padding:"4px 12px",borderRadius:"6px"}}>
+                    <span style={{fontSize:"13px",fontWeight:700,color:t.acc}}>{res.eff.toFixed(1)}% effective tax rate</span>
                   </div>
-                ))}
+                </div>
+                {/* Total Tax */}
+                <div className={`fi ${animIn?"on":""}`} style={{background:`${t.dan}0e`,border:`1.5px solid ${t.dan}44`,borderRadius:"20px",padding:"24px 28px",transitionDelay:"0.1s",position:"relative",overflow:"hidden"}}>
+                  <div style={{position:"absolute",top:"-30px",right:"-30px",width:"120px",height:"120px",borderRadius:"50%",background:t.dan,opacity:.06,pointerEvents:"none"}}/>
+                  <div style={{fontSize:"11px",color:t.dan,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:"10px"}}>⚠️ Total Tax Due</div>
+                  <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"clamp(32px,4vw,48px)",fontWeight:800,color:t.txt,lineHeight:1,marginBottom:"8px"}}>${Math.round(res.allTax).toLocaleString()}</div>
+                  <div style={{fontSize:"13px",color:t.mut}}>Federal + SE + {userProfile.state} state tax</div>
+                  <div style={{marginTop:"12px",display:"inline-flex",alignItems:"center",gap:"6px",background:`${t.dan}18`,border:`1px solid ${t.dan}44`,padding:"4px 12px",borderRadius:"6px"}}>
+                    <span style={{fontSize:"13px",fontWeight:700,color:t.dan}}>Set aside ${Math.round(res.allTax).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+              {/* ── Supporting stats ── */}
+              <div style={{display:"grid",gridTemplateColumns:w<600?"1fr 1fr":"1fr 1fr",gap:"12px",marginBottom:"20px"}}>
+                <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.wrn}44`,borderRadius:"14px",padding:"16px 20px",transitionDelay:"0.15s",display:"flex",alignItems:"center",gap:"14px"}}>
+                  <div style={{width:"42px",height:"42px",borderRadius:"12px",background:`${t.wrn}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",flexShrink:0}}>🏦</div>
+                  <div>
+                    <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"3px"}}>Set Aside Now</div>
+                    <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"22px",fontWeight:800,color:t.wrn}}>${Math.round(res.allTax).toLocaleString()}</div>
+                    <div style={{fontSize:"11px",color:t.mut}}>Recommended reserve</div>
+                  </div>
+                </div>
+                <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid #a259ff44`,borderRadius:"14px",padding:"16px 20px",transitionDelay:"0.2s",display:"flex",alignItems:"center",gap:"14px"}}>
+                  <div style={{width:"42px",height:"42px",borderRadius:"12px",background:"#a259ff20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",flexShrink:0}}>📅</div>
+                  <div>
+                    <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"3px"}}>Per Quarter</div>
+                    <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"22px",fontWeight:800,color:"#a259ff"}}>${Math.round(res.qtr).toLocaleString()}</div>
+                    <div style={{fontSize:"11px",color:t.mut}}>Estimated payment</div>
+                  </div>
+                </div>
               </div>
 
               {/* Donut + breakdown */}
@@ -1145,7 +1300,7 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
                     <circle cx="88" cy="88" r={donutR} fill="none" stroke={t.fnt} strokeWidth="22"/>
                     {[...dSegs].reverse().map((s,ri)=>{
                       const i=dSegs.length-1-ri;
-                      const visibleLen=animIn?s.segLen:0;
+                      const visibleLen=s.segLen; // always show — live update
                       const gap=donutC-visibleLen;
                       return(
                         <circle key={s.label} cx="88" cy="88" r={donutR} fill="none"
@@ -1182,7 +1337,7 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
                     {label:"Federal Taxable",                                         val:res.fedInc,  style:"sub",   indent:0},
                     {label:"Federal Income Tax",                                      val:res.fed,     style:"tax",   indent:1},
                     {label:"Self-Employment (15.3%)",                                 val:res.se,      style:"tax",   indent:1},
-                    {label:`${userProfile.state} State (${STATE_TAXES[userProfile.state]}%)`,val:res.stTax,style:"tax",indent:1},
+                    {label:`${userProfile.state} State (${STATE_TAXES[userProfile.state]}% top marginal)`,val:res.stTax,style:"tax",indent:1},
                     {label:"TOTAL TAX",                                               val:res.allTax,  style:"grand", indent:0},
                     {label:"TAKE HOME",                                               val:res.home,    style:"home",  indent:0},
                   ].filter(r=>r.style!=="deduct"||Math.abs(r.val)>0).map(row=>(
@@ -1703,166 +1858,115 @@ function LandingPage({dark,onEnter,t}){
 }
 
 
-// ─── EXPENSES & FEES TAB ──────────────────────────────────────────────────────
+
 function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpense:addExpenseProp,updateExpense:updateExpenseProp,deleteExpense:deleteExpenseProp}){
   const t=T(dark);
   const w=useW();
 
-  // ── State ──
   const [viewMonth,setViewMonth]=useState(selMonth);
   const [viewYear,setViewYear]=useState(selYear);
-  const [filterCat,setFilterCat]=useState("all");
-  const [filterType,setFilterType]=useState("all");
-  const [showAdd,setShowAdd]=useState(false);
-  const [editId,setEditId]=useState(null);   // which row is in edit mode
+  const [activeView,setActiveView]=useState("overview"); // overview | transactions | add
+  const [editId,setEditId]=useState(null);
   const [animIn,setAnimIn]=useState(false);
   useEffect(()=>{setTimeout(()=>setAnimIn(true),60);},[]);
 
   const BLANK={name:"",amount:"",category:"software",type:"expense",recurring:false,recurringFreq:"monthly",recurringStart:"",note:"",taxDeduction:false};
   const [form,setForm]=useState(BLANK);
-  const [editForm,setEditForm]=useState(null); // copy of row being edited
-
-  // ── Helpers ──
+  const [editForm,setEditForm]=useState(null);
   const FREQ_LABELS={"monthly":"Monthly","quarterly":"Quarterly","yearly":"Yearly"};
 
-  // Determine whether a recurring expense should appear in a given month/year
-  function recurringApplies(exp, m, y){
-    if(!exp.recurring || !exp.recurringFreq || !exp.recurringStart) return false;
+  // ── Recurring projection ───────────────────────────────────────────────────
+  function recurringApplies(exp,m,y){
+    if(!exp.recurring||!exp.recurringFreq||!exp.recurringStart) return false;
     const start=new Date(exp.recurringStart+"T12:00:00");
     const sm=start.getMonth(), sy=start.getFullYear();
-    // Must not be before the start date
-    if(y < sy || (y===sy && m < sm)) return false;
+    if(y<sy||(y===sy&&m<sm)) return false;
     if(exp.recurringFreq==="monthly") return true;
-    if(exp.recurringFreq==="quarterly"){
-      // applies if (m - sm) mod 3 === 0
-      const totalMonths=(y-sy)*12+(m-sm);
-      return totalMonths % 3 === 0;
-    }
-    if(exp.recurringFreq==="yearly"){
-      return m===sm; // same month each year
-    }
+    if(exp.recurringFreq==="quarterly") return ((y-sy)*12+(m-sm))%3===0;
+    if(exp.recurringFreq==="yearly") return m===sm;
     return false;
   }
 
-  // Build the effective expense list for the viewed month:
-  // 1. Non-recurring expenses that literally have that month's date
-  // 2. Recurring "master" records projected into this month (one virtual entry per master)
-  //    — but only if no manual entry for that id already exists in this month
+  // Build viewed entries for current month
   const viewedEntries=[];
-  const seenRecurIds=new Set();
-
-  // First pass: real dated entries
+  const seenIds=new Set();
   expenses.forEach(e=>{
     const d=new Date(e.date+"T12:00:00");
-    if(d.getMonth()===viewMonth && d.getFullYear()===viewYear){
-      viewedEntries.push({...e, _virtual:false});
-      if(e.recurring) seenRecurIds.add(e.id);
+    if(d.getMonth()===viewMonth&&d.getFullYear()===viewYear){
+      viewedEntries.push({...e,_virtual:false});
+      if(e.recurring) seenIds.add(e.id);
     }
   });
-
-  // Second pass: project recurring masters into this month if not already present
-  // "Master" records are the ones with recurringStart set; we find unique masters by id
-  // A master is any record whose recurringStart matches its own date (i.e. the original)
   expenses.forEach(e=>{
-    if(!e.recurring || !e.recurringFreq || !e.recurringStart) return;
-    if(seenRecurIds.has(e.id)) return; // already have a real entry this month
-    if(!recurringApplies(e, viewMonth, viewYear)) return;
-    // Project it as a virtual entry dated to the 1st of the viewed month
+    if(!e.recurring||!e.recurringFreq||!e.recurringStart) return;
+    if(seenIds.has(e.id)) return;
+    if(!recurringApplies(e,viewMonth,viewYear)) return;
     const projDate=`${viewYear}-${String(viewMonth+1).padStart(2,"0")}-01`;
-    viewedEntries.push({...e, date:projDate, _virtual:true, _masterId:e.id});
-    seenRecurIds.add(e.id);
+    viewedEntries.push({...e,date:projDate,_virtual:true,_masterId:e.id});
+    seenIds.add(e.id);
   });
 
   const monthExp=viewedEntries;
-
-  const filtered=monthExp.filter(e=>{
-    if(filterCat!=="all" && e.category!==filterCat) return false;
-    if(filterType!=="all" && e.type!==filterType) return false;
-    return true;
-  });
-
   const totalExpenses=monthExp.filter(e=>e.type==="expense").reduce((s,e)=>s+e.amount,0);
-  const totalFees    =monthExp.filter(e=>e.type==="fee"    ).reduce((s,e)=>s+e.amount,0);
-  const totalOut     =totalExpenses+totalFees;
+  const totalFees=monthExp.filter(e=>e.type==="fee").reduce((s,e)=>s+e.amount,0);
+  const totalOut=totalExpenses+totalFees;
   const recurringTotal=monthExp.filter(e=>e.recurring).reduce((s,e)=>s+e.amount,0);
-  const monthIncome  =entries.filter(e=>e.month===viewMonth&&e.year===viewYear).reduce((s,e)=>s+e.amount,0);
-  const netIncome    =monthIncome-totalOut;
+  const deductibleTotal=monthExp.filter(e=>e.taxDeduction).reduce((s,e)=>s+e.amount,0);
+  const monthIncome=entries.filter(e=>e.month===viewMonth&&e.year===viewYear).reduce((s,e)=>s+e.amount,0);
+  const netIncome=monthIncome-totalOut;
 
+  // 6-month trend
+  const trendMonths=[];
+  for(let i=5;i>=0;i--){
+    let m=viewMonth-i, y=viewYear;
+    if(m<0){m+=12;y--;}
+    const tEntries=[];
+    const tSeen=new Set();
+    expenses.forEach(e=>{
+      const d=new Date(e.date+"T12:00:00");
+      if(d.getMonth()===m&&d.getFullYear()===y){tEntries.push(e);if(e.recurring)tSeen.add(e.id);}
+    });
+    expenses.forEach(e=>{
+      if(!e.recurring||!e.recurringFreq||!e.recurringStart) return;
+      if(tSeen.has(e.id)) return;
+      if(recurringApplies(e,m,y)) tEntries.push({...e,_virtual:true});
+    });
+    const mInc=entries.filter(e=>e.month===m&&e.year===y).reduce((s,e)=>s+e.amount,0);
+    trendMonths.push({month:MONTHS[m],expenses:tEntries.filter(e=>e.type==="expense").reduce((s,e)=>s+e.amount,0),fees:tEntries.filter(e=>e.type==="fee").reduce((s,e)=>s+e.amount,0),income:mInc});
+  }
+
+  // Category breakdown
   const byCat=EXP_CATS.map(cat=>{
     const ce=monthExp.filter(e=>e.category===cat.id);
     return{...cat,total:ce.reduce((s,e)=>s+e.amount,0),count:ce.length};
   }).filter(c=>c.total>0).sort((a,b)=>b.total-a.total);
   const maxCat=byCat[0]?.total||1;
 
-  const trendMonths=[];
-  for(let i=5;i>=0;i--){
-    let m=viewMonth-i, y=viewYear;
-    if(m<0){m+=12;y--;}
-    // Build virtual list for this month for the trend
-    const tEntries=[];
-    const tSeen=new Set();
-    expenses.forEach(e=>{
-      const d=new Date(e.date+"T12:00:00");
-      if(d.getMonth()===m && d.getFullYear()===y){tEntries.push(e);if(e.recurring)tSeen.add(e.id);}
-    });
-    expenses.forEach(e=>{
-      if(!e.recurring||!e.recurringFreq||!e.recurringStart)return;
-      if(tSeen.has(e.id))return;
-      if(recurringApplies(e,m,y))tEntries.push({...e,_virtual:true});
-    });
-    const mInc=entries.filter(e=>e.month===m&&e.year===y).reduce((s,e)=>s+e.amount,0);
-    trendMonths.push({
-      month:MONTHS[m],
-      expenses:tEntries.filter(e=>e.type==="expense").reduce((s,e)=>s+e.amount,0),
-      fees:tEntries.filter(e=>e.type==="fee").reduce((s,e)=>s+e.amount,0),
-      income:mInc,
-    });
-  }
-
-  // ── CRUD ──
+  // CRUD
   function addExpense(){
     if(!form.name||!form.amount) return;
     const projDate=`${viewYear}-${String(viewMonth+1).padStart(2,"0")}-01`;
-    const rs=form.recurring ? projDate : null;
-    const newExp={
-      id:`e${Date.now()}`,
-      date:projDate,
-      amount:parseFloat(form.amount),
-      category:form.category,
-      name:form.name,
-      note:form.note,
-      type:form.type,
-      recurring:form.recurring,
-      recurringFreq:form.recurring ? form.recurringFreq : null,
-      recurringStart:rs,
-      taxDeduction:form.taxDeduction||false,
-    };
+    const rs=form.recurring?projDate:null;
+    const newExp={id:`e${Date.now()}`,date:projDate,amount:parseFloat(form.amount),category:form.category,name:form.name,note:form.note,type:form.type,recurring:form.recurring,recurringFreq:form.recurring?form.recurringFreq:null,recurringStart:rs,taxDeduction:form.taxDeduction||false};
     if(addExpenseProp) addExpenseProp(newExp); else setExpenses(p=>[...p,newExp]);
     setForm(BLANK);
-    setShowAdd(false);
+    setActiveView("transactions");
   }
 
-  function deleteExpense(id, isVirtual){
+  function deleteExpense(id){
     if(deleteExpenseProp) deleteExpenseProp(id); else setExpenses(p=>p.filter(e=>e.id!==id));
   }
 
   function startEdit(e){
     setEditId(e.id);
-    setEditForm({
-      name:e.name, amount:String(e.amount), category:e.category,
-      type:e.type, note:e.note||"",
-      recurring:e.recurring, recurringFreq:e.recurringFreq||"monthly",
-      taxDeduction:e.taxDeduction||false,
-    });
-    setShowAdd(false);
+    setEditForm({name:e.name,amount:String(e.amount),category:e.category,type:e.type,note:e.note||"",recurring:e.recurring,recurringFreq:e.recurringFreq||"monthly",taxDeduction:e.taxDeduction||false});
   }
 
   function saveEdit(id){
     if(!editForm.name||!editForm.amount) return;
     const changes={name:editForm.name,amount:parseFloat(editForm.amount),category:editForm.category,type:editForm.type,note:editForm.note,recurring:editForm.recurring,recurringFreq:editForm.recurring?editForm.recurringFreq:null,taxDeduction:editForm.taxDeduction||false};
     if(updateExpenseProp) updateExpenseProp(id,changes); else setExpenses(p=>p.map(e=>e.id===id?{...e,...changes}:e));
-    setEditId(null);
-    setEditForm(null);
+    setEditId(null);setEditForm(null);
   }
 
   function cancelEdit(){setEditId(null);setEditForm(null);}
@@ -1870,12 +1974,11 @@ function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpe
   const getCat=id=>EXP_CATS.find(c=>c.id===id)||EXP_CATS[EXP_CATS.length-1];
   const inp={background:t.inp,border:`1.5px solid ${t.brd}`,color:t.txt,padding:"10px 14px",fontSize:"13px",width:"100%",borderRadius:"10px",fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif"};
 
-  // ── Recurring frequency picker (reused in add + edit) ──
   function FreqPicker({val,onChange}){
     return(
-      <div style={{display:"flex",gap:"4px"}}>
+      <div style={{display:"flex",gap:"6px"}}>
         {Object.entries(FREQ_LABELS).map(([k,l])=>(
-          <button key={k} className="btn" onClick={()=>onChange(k)} style={{flex:1,padding:"9px 4px",fontSize:"11px",fontWeight:600,background:val===k?t.acc:"transparent",color:val===k?"#fff":t.mut,border:`1.5px solid ${val===k?t.acc:t.brd}`,borderRadius:"7px",textAlign:"center"}}>
+          <button key={k} className="btn" onClick={()=>onChange(k)} style={{flex:1,padding:"9px 4px",fontSize:"12px",fontWeight:600,background:val===k?t.acc:"transparent",color:val===k?"#fff":t.mut,border:`1.5px solid ${val===k?t.acc:t.brd}`,borderRadius:"7px",textAlign:"center"}}>
             {l}
           </button>
         ))}
@@ -1884,13 +1987,13 @@ function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpe
   }
 
   return(
-    <div style={{maxWidth:"1100px"}}>
+    <div style={{maxWidth:"1000px"}}>
 
       {/* ── Period selector ── */}
-      <div className={`fi ${animIn?"on":""}`} style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"24px",flexWrap:"wrap"}}>
+      <div className={`fi ${animIn?"on":""}`} style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"20px",flexWrap:"wrap"}}>
         <span style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px"}}>PERIOD</span>
         {MONTHS.map((m,i)=>(
-          <button key={m} className="mb btn" onClick={()=>setViewMonth(i)} style={{padding:w<600?"6px 9px":"7px 13px",fontSize:w<600?"11px":"13px",fontWeight:600,background:viewMonth===i?t.acc:"transparent",color:viewMonth===i?"#fff":t.mut,border:`1.5px solid ${viewMonth===i?t.acc:t.brd}`,borderRadius:"8px"}}>
+          <button key={m} className="mb btn" onClick={()=>setViewMonth(i)} style={{padding:w<600?"5px 8px":"7px 13px",fontSize:w<600?"11px":"13px",fontWeight:600,background:viewMonth===i?t.acc:"transparent",color:viewMonth===i?"#fff":t.mut,border:`1.5px solid ${viewMonth===i?t.acc:t.brd}`,borderRadius:"8px"}}>
             {m}
           </button>
         ))}
@@ -1902,350 +2005,508 @@ function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpe
         </div>
       </div>
 
-      {/* ── Net income hero ── */}
-      <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"20px",padding:"24px 28px",marginBottom:"16px",transitionDelay:"0.05s"}}>
-        <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:"16px"}}>
-          Net Income Breakdown — {MONTHS[viewMonth]} {viewYear}
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap",marginBottom:"20px"}}>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",background:`${t.acc}18`,border:`1.5px solid ${t.acc}44`,borderRadius:"12px",padding:"14px 20px",minWidth:"140px"}}>
-            <div style={{fontSize:"11px",color:t.acc,fontWeight:700,letterSpacing:"1px",marginBottom:"4px"}}>INCOME</div>
-            <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"26px",fontWeight:800,color:t.acc}}>${monthIncome.toLocaleString()}</div>
-          </div>
-          <div style={{fontSize:"22px",color:t.mut,fontWeight:300}}>−</div>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",background:`${t.wrn}14`,border:`1.5px solid ${t.wrn}44`,borderRadius:"12px",padding:"14px 20px",minWidth:"140px"}}>
-            <div style={{fontSize:"11px",color:t.wrn,fontWeight:700,letterSpacing:"1px",marginBottom:"4px"}}>EXPENSES</div>
-            <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"26px",fontWeight:800,color:t.wrn}}>${totalExpenses.toLocaleString()}</div>
-          </div>
-          <div style={{fontSize:"22px",color:t.mut,fontWeight:300}}>−</div>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",background:`${t.dan}14`,border:`1.5px solid ${t.dan}44`,borderRadius:"12px",padding:"14px 20px",minWidth:"140px"}}>
-            <div style={{fontSize:"11px",color:t.dan,fontWeight:700,letterSpacing:"1px",marginBottom:"4px"}}>FEES</div>
-            <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"26px",fontWeight:800,color:t.dan}}>${totalFees.toLocaleString()}</div>
-          </div>
-          <div style={{fontSize:"22px",color:t.mut,fontWeight:300}}>=</div>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",background:netIncome>=0?`${t.acc}18`:`${t.dan}18`,border:`1.5px solid ${netIncome>=0?t.acc:t.dan}44`,borderRadius:"12px",padding:"14px 24px",minWidth:"160px"}}>
-            <div style={{fontSize:"11px",color:netIncome>=0?t.acc:t.dan,fontWeight:700,letterSpacing:"1px",marginBottom:"4px"}}>NET INCOME</div>
-            <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"28px",fontWeight:800,color:netIncome>=0?t.acc:t.dan}}>${Math.abs(netIncome).toLocaleString()}</div>
-            {netIncome<0&&<div style={{fontSize:"11px",color:t.dan,marginTop:"3px"}}>in the red</div>}
-          </div>
-        </div>
-        {monthIncome>0&&(
-          <div>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:"6px"}}>
-              <span style={{fontSize:"12px",color:t.mut,fontWeight:500}}>Expenses + fees are <strong style={{color:totalOut/monthIncome>.5?t.dan:t.wrn}}>{((totalOut/monthIncome)*100).toFixed(0)}%</strong> of income</span>
-              <span style={{fontSize:"12px",color:t.mut}}>Recurring fixed costs: <strong style={{color:t.txt}}>${recurringTotal.toLocaleString()}/mo</strong></span>
+      {/* ── Summary bar: 4 key numbers ── */}
+      <div className={`fi ${animIn?"on":""}`} style={{display:"grid",gridTemplateColumns:w<600?"1fr 1fr":"repeat(4,1fr)",gap:"12px",marginBottom:"20px",transitionDelay:"0.05s"}}>
+        {[
+          {label:"Total Out",   val:`$${totalOut.toLocaleString()}`,     color:t.dan,  bg:`${t.dan}12`,  icon:"💸"},
+          {label:"Net Income",  val:`$${Math.abs(netIncome).toLocaleString()}${netIncome<0?" 🔴":""}`, color:netIncome>=0?t.acc:t.dan, bg:netIncome>=0?`${t.acc}12`:`${t.dan}12`, icon:netIncome>=0?"✅":"⚠️"},
+          {label:"Recurring",   val:`$${recurringTotal.toLocaleString()}/mo`, color:"#a259ff", bg:"#a259ff12", icon:"🔁"},
+          {label:"Tax Deductible",  val:`$${deductibleTotal.toLocaleString()}`, color:"#00b894", bg:"#00b89412", icon:"🧾"},
+        ].map((s,i)=>(
+          <div key={s.label} className={`fi card ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"14px",padding:"16px",transitionDelay:`${i*.06}s`,position:"relative",overflow:"hidden"}}>
+            <div style={{position:"absolute",top:0,left:0,right:0,height:"3px",background:s.color,opacity:.7}}/>
+            <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"8px",display:"flex",justifyContent:"space-between"}}>
+              {s.label}<span>{s.icon}</span>
             </div>
-            <div style={{height:"8px",background:t.fnt,borderRadius:"4px",overflow:"hidden",display:"flex"}}>
-              <div style={{width:`${Math.min((totalExpenses/monthIncome)*100,100)}%`,background:`linear-gradient(90deg,${t.wrn},${t.wrn}cc)`,transition:"width 1s ease",borderRadius:"4px 0 0 4px"}}/>
-              <div style={{width:`${Math.min((totalFees/monthIncome)*100,100)}%`,background:`linear-gradient(90deg,${t.dan},${t.dan}cc)`,transition:"width 1s ease"}}/>
+            <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"22px",fontWeight:800,color:s.color}}>{s.val}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Tab switcher ── */}
+      <div className={`fi ${animIn?"on":""}`} style={{display:"flex",background:t.inp,borderRadius:"12px",padding:"4px",gap:"4px",marginBottom:"20px",border:`1.5px solid ${t.brd}`,transitionDelay:"0.1s"}}>
+        {[["overview","📊 Overview"],["transactions","📋 Transactions"],["add","+ Add Expense"]].map(([id,label])=>(
+          <button key={id} className="btn" onClick={()=>{setActiveView(id);if(id!=="transactions")setEditId(null);}} style={{flex:1,padding:"10px",fontSize:"13px",fontWeight:activeView===id?700:500,background:activeView===id?t.crd:"transparent",color:activeView===id?t.txt:t.mut,borderRadius:"9px",border:activeView===id?`1.5px solid ${t.brd}`:"none",transition:"all .15s"}}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── VIEW: OVERVIEW ── */}
+      {activeView==="overview"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:"16px"}}>
+
+          {/* Income vs spending bar */}
+          <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"24px",transitionDelay:"0.15s"}}>
+            <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"16px"}}>
+              {MONTHS[viewMonth]} {viewYear} — Income vs Spending
             </div>
-            <div style={{display:"flex",gap:"16px",marginTop:"7px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:"20px",marginBottom:"16px",flexWrap:"wrap"}}>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:"11px",color:t.acc,fontWeight:700,marginBottom:"4px"}}>INCOME</div>
+                <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"28px",fontWeight:800,color:t.acc}}>${monthIncome.toLocaleString()}</div>
+              </div>
+              <div style={{fontSize:"20px",color:t.mut}}>vs</div>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:"11px",color:t.dan,fontWeight:700,marginBottom:"4px"}}>SPENT</div>
+                <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"28px",fontWeight:800,color:t.dan}}>${totalOut.toLocaleString()}</div>
+              </div>
+              <div style={{flex:1,minWidth:"120px"}}>
+                <div style={{fontSize:"11px",color:t.mut,marginBottom:"6px",fontWeight:600}}>
+                  {monthIncome>0?`${((totalOut/monthIncome)*100).toFixed(0)}% of income spent`:"No income tracked this month"}
+                </div>
+                <div style={{height:"10px",background:t.fnt,borderRadius:"5px",overflow:"hidden",display:"flex"}}>
+                  <div style={{width:monthIncome>0?`${Math.min((totalExpenses/monthIncome)*100,100)}%`:"0",background:t.wrn,transition:"width 1s ease"}}/>
+                  <div style={{width:monthIncome>0?`${Math.min((totalFees/monthIncome)*100,100)}%`:"0",background:t.dan,transition:"width 1s ease"}}/>
+                </div>
+                <div style={{display:"flex",gap:"12px",marginTop:"6px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:"5px"}}><div style={{width:"8px",height:"8px",borderRadius:"2px",background:t.wrn}}/><span style={{fontSize:"11px",color:t.mut}}>Expenses</span></div>
+                  <div style={{display:"flex",alignItems:"center",gap:"5px"}}><div style={{width:"8px",height:"8px",borderRadius:"2px",background:t.dan}}/><span style={{fontSize:"11px",color:t.mut}}>Fees</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Category breakdown */}
+          <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"24px",transitionDelay:"0.2s"}}>
+            <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"16px"}}>Spending by Category</div>
+            {byCat.length===0
+              ?<div style={{textAlign:"center",padding:"24px 0",color:t.fnt,fontSize:"14px"}}>No expenses this month</div>
+              :byCat.map((cat,i)=>(
+                <div key={cat.id} style={{marginBottom:"14px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+                      <div style={{width:"32px",height:"32px",borderRadius:"9px",background:`${cat.color}22`,border:`1.5px solid ${cat.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"16px"}}>{cat.icon}</div>
+                      <div>
+                        <div style={{fontSize:"13px",fontWeight:600,color:t.txt}}>{cat.label}</div>
+                        <div style={{fontSize:"11px",color:t.mut}}>{cat.count} item{cat.count!==1?"s":""}</div>
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:"15px",fontWeight:800,color:cat.color}}>${cat.total.toLocaleString()}</div>
+                      <div style={{fontSize:"11px",color:t.mut}}>{totalOut>0?((cat.total/totalOut)*100).toFixed(0):0}%</div>
+                    </div>
+                  </div>
+                  <div style={{height:"6px",background:t.fnt,borderRadius:"3px",overflow:"hidden"}}>
+                    <div className="bf" style={{height:"100%",width:animIn?`${(cat.total/maxCat)*100}%`:"0%",background:`linear-gradient(90deg,${cat.color},${cat.color}99)`,borderRadius:"3px",transitionDelay:`${0.2+i*.05}s`}}/>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+
+          {/* 6-month trend */}
+          <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"24px",transitionDelay:"0.25s"}}>
+            <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"16px"}}>6-Month Trend</div>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={trendMonths} margin={{top:4,right:4,left:0,bottom:4}}>
+                <XAxis dataKey="month" tick={{fill:t.mut,fontSize:11}} axisLine={false} tickLine={false}/>
+                <YAxis tick={{fill:t.mut,fontSize:11}} axisLine={false} tickLine={false} tickFormatter={v=>`$${(v/1000).toFixed(0)}k`}/>
+                <Tooltip content={p=><CTip {...p} dark={dark}/>}/>
+                <Bar dataKey="expenses" name="Expenses" stackId="a" fill={t.wrn} opacity={.85}/>
+                <Bar dataKey="fees"     name="Fees"     stackId="a" fill={t.dan} opacity={.85} radius={[4,4,0,0]}/>
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{display:"flex",gap:"16px",marginTop:"8px"}}>
               <div style={{display:"flex",alignItems:"center",gap:"5px"}}><div style={{width:"10px",height:"10px",borderRadius:"2px",background:t.wrn}}/><span style={{fontSize:"11px",color:t.mut}}>Expenses</span></div>
               <div style={{display:"flex",alignItems:"center",gap:"5px"}}><div style={{width:"10px",height:"10px",borderRadius:"2px",background:t.dan}}/><span style={{fontSize:"11px",color:t.mut}}>Fees</span></div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"1fr 1fr",gap:"14px",marginBottom:"16px"}}>
-        {/* Category breakdown */}
-        <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"22px",transitionDelay:"0.15s"}}>
-          <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"16px"}}>By Category</div>
-          {byCat.length===0
-            ?<div style={{textAlign:"center",padding:"24px 0",color:t.fnt,fontSize:"14px"}}>No expenses this month</div>
-            :byCat.map((cat,i)=>(
-              <div key={cat.id} style={{marginBottom:"14px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                    <span style={{fontSize:"16px"}}>{cat.icon}</span>
-                    <span style={{fontSize:"13px",fontWeight:600,color:t.txt}}>{cat.label}</span>
-                    <span style={{fontSize:"11px",color:t.mut,background:t.inp,padding:"2px 7px",borderRadius:"5px"}}>{cat.count}</span>
+      {/* ── VIEW: TRANSACTIONS ── */}
+      {activeView==="transactions"&&(
+        <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"22px",transitionDelay:"0.1s"}}>
+          {/* Filter row */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",flexWrap:"wrap",gap:"10px"}}>
+            <div style={{fontSize:"14px",fontWeight:700,color:t.txt}}>{monthExp.length} transactions in {MONTHS[viewMonth]}</div>
+            <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+              <select onChange={e=>{}} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.txt,padding:"7px 12px",fontSize:"12px",borderRadius:"8px",fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif",fontWeight:600}}>
+                <option value="all">All Categories</option>
+                {EXP_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Transaction rows */}
+          <div style={{maxHeight:"520px",overflowY:"auto",display:"flex",flexDirection:"column",gap:"8px"}}>
+            {monthExp.length===0
+              ?<div style={{textAlign:"center",padding:"48px 0",color:t.fnt}}>
+                  <div style={{fontSize:"32px",marginBottom:"12px"}}>💸</div>
+                  <div style={{fontSize:"15px",fontWeight:600,color:t.mut,marginBottom:"8px"}}>No expenses this month</div>
+                  <button className="btn" onClick={()=>setActiveView("add")} style={{background:t.acc,color:"#fff",padding:"10px 24px",fontSize:"13px",fontWeight:700,borderRadius:"8px"}}>+ Add First Expense</button>
+                </div>
+              :monthExp.sort((a,b)=>new Date(b.date+"T12:00:00")-new Date(a.date+"T12:00:00")).map(e=>{
+                const cat=getCat(e.category);
+                const isEditing=editId===e.id;
+                return(
+                  <div key={e._virtual?`v-${e.id}`:e.id}>
+                    {/* ── VIEW ROW ── */}
+                    {!isEditing&&(
+                      <div className="hr" style={{display:"flex",alignItems:"center",gap:"12px",padding:"12px",background:t.inp,borderRadius:"12px",border:`1px solid ${t.brd}`,transition:"all .13s"}}>
+                        <div style={{width:"40px",height:"40px",borderRadius:"11px",background:`${cat.color}22`,border:`1.5px solid ${cat.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}>
+                          {cat.icon}
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"3px",flexWrap:"wrap"}}>
+                            <span style={{fontSize:"14px",fontWeight:600,color:t.txt}}>{e.name}</span>
+                            {e._virtual&&<span style={{fontSize:"10px",fontWeight:700,color:"#7b8cff",background:"#7b8cff18",padding:"1px 6px",borderRadius:"4px"}}>AUTO</span>}
+                            {e.recurring&&e.recurringFreq&&<span style={{fontSize:"10px",fontWeight:700,color:t.acc,background:`${t.acc}18`,padding:"1px 6px",borderRadius:"4px"}}>🔁 {FREQ_LABELS[e.recurringFreq]}</span>}
+                            {e.taxDeduction&&<span style={{fontSize:"10px",fontWeight:700,color:"#00b894",background:"#00b89418",padding:"1px 6px",borderRadius:"4px"}}>🧾 Deductible</span>}
+                            <span style={{fontSize:"10px",fontWeight:700,color:e.type==="fee"?t.dan:t.wrn,background:e.type==="fee"?`${t.dan}18`:`${t.wrn}18`,padding:"1px 6px",borderRadius:"4px"}}>{e.type==="fee"?"FEE":"EXPENSE"}</span>
+                          </div>
+                          <div style={{fontSize:"12px",color:t.mut}}>{cat.label}{e.note&&` · ${e.note}`} · {new Date(e.date+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:"8px",flexShrink:0}}>
+                          <span style={{fontFamily:"'Outfit',sans-serif",fontSize:"17px",fontWeight:800,color:e.type==="fee"?t.dan:t.wrn}}>-${e.amount.toLocaleString()}</span>
+                          <button className="btn" onClick={()=>startEdit(e)} style={{background:t.crd,border:`1.5px solid ${t.brd}`,color:t.mut,fontSize:"11px",fontWeight:600,padding:"5px 10px",borderRadius:"6px"}}>Edit</button>
+                          <button className="db btn" onClick={()=>deleteExpense(e.id)} style={{background:"transparent",color:t.dan,fontSize:"18px",padding:"2px 6px",borderRadius:"6px",lineHeight:1}}>×</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── INLINE EDIT ROW ── */}
+                    {isEditing&&editForm&&(
+                      <div style={{background:t.inp,border:`1.5px solid ${t.acc}55`,borderRadius:"14px",padding:"16px"}}>
+                        <div style={{fontSize:"11px",color:t.acc,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"12px"}}>Edit Transaction</div>
+                        <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"2fr 1fr 1fr",gap:"8px",marginBottom:"10px"}}>
+                          <div>
+                            <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"4px"}}>NAME</div>
+                            <input value={editForm.name} onChange={e=>setEditForm({...editForm,name:e.target.value})} style={inp}/>
+                          </div>
+                          <div>
+                            <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"4px"}}>AMOUNT ($)</div>
+                            <input value={editForm.amount} onChange={e=>setEditForm({...editForm,amount:e.target.value})} type="number" style={inp}/>
+                          </div>
+                          <div>
+                            <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"4px"}}>TYPE</div>
+                            <div style={{display:"flex",gap:"4px"}}>
+                              {[["expense","Expense"],["fee","Fee"]].map(([v,l])=>(
+                                <button key={v} className="btn" onClick={()=>setEditForm({...editForm,type:v})} style={{flex:1,padding:"10px 4px",fontSize:"11px",fontWeight:600,background:editForm.type===v?t.txt:t.crd,color:editForm.type===v?t.bg:t.mut,border:`1.5px solid ${editForm.type===v?t.txt:t.brd}`,borderRadius:"7px"}}>
+                                  {l}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginBottom:"10px"}}>
+                          <div>
+                            <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"4px"}}>CATEGORY</div>
+                            <select value={editForm.category} onChange={e=>setEditForm({...editForm,category:e.target.value})} style={inp}>
+                              {EXP_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"4px"}}>NOTE</div>
+                            <input value={editForm.note} onChange={e=>setEditForm({...editForm,note:e.target.value})} placeholder="Context or tag…" style={inp}/>
+                          </div>
+                        </div>
+                        {/* Recurring + Tax deduction toggles side by side */}
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginBottom:"12px"}}>
+                          <div onClick={()=>setEditForm({...editForm,recurring:!editForm.recurring})} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:editForm.recurring?`${t.acc}10`:t.crd,border:`1.5px solid ${editForm.recurring?t.acc:t.brd}`,borderRadius:"10px",padding:"10px 12px",cursor:"pointer",transition:"all .2s"}}>
+                            <div>
+                              <div style={{fontSize:"12px",fontWeight:700,color:t.txt}}>🔁 Recurring</div>
+                              {editForm.recurring&&<div style={{marginTop:"6px"}}><FreqPicker val={editForm.recurringFreq||"monthly"} onChange={v=>setEditForm({...editForm,recurringFreq:v})}/></div>}
+                            </div>
+                            <div style={{width:"34px",height:"19px",borderRadius:"10px",background:editForm.recurring?t.acc:t.fnt,position:"relative",flexShrink:0,marginLeft:"8px"}}>
+                              <div style={{position:"absolute",top:"2px",left:editForm.recurring?"16px":"2px",width:"15px",height:"15px",borderRadius:"50%",background:"#fff",transition:"left .2s"}}/>
+                            </div>
+                          </div>
+                          <div onClick={()=>setEditForm({...editForm,taxDeduction:!editForm.taxDeduction})} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:editForm.taxDeduction?`${t.acc}10`:t.crd,border:`1.5px solid ${editForm.taxDeduction?t.acc:t.brd}`,borderRadius:"10px",padding:"10px 12px",cursor:"pointer",transition:"all .2s"}}>
+                            <div style={{fontSize:"12px",fontWeight:700,color:t.txt}}>🧾 Tax Deductible</div>
+                            <div style={{width:"34px",height:"19px",borderRadius:"10px",background:editForm.taxDeduction?t.acc:t.fnt,position:"relative",flexShrink:0,marginLeft:"8px"}}>
+                              <div style={{position:"absolute",top:"2px",left:editForm.taxDeduction?"16px":"2px",width:"15px",height:"15px",borderRadius:"50%",background:"#fff",transition:"left .2s"}}/>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{display:"flex",gap:"8px"}}>
+                          <button className="btn" onClick={()=>saveEdit(e.id)} style={{background:t.acc,color:"#fff",padding:"9px 22px",fontSize:"13px",fontWeight:700,borderRadius:"8px"}}>Save ✓</button>
+                          <button className="btn" onClick={cancelEdit} style={{background:"transparent",border:`1.5px solid ${t.brd}`,color:t.mut,padding:"9px 18px",fontSize:"13px",fontWeight:600,borderRadius:"8px"}}>Cancel</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <span style={{fontSize:"14px",fontWeight:700,color:cat.color}}>${cat.total.toLocaleString()}</span>
-                </div>
-                <div style={{height:"6px",background:t.fnt,borderRadius:"3px",overflow:"hidden"}}>
-                  <div className="bf" style={{height:"100%",width:animIn?`${(cat.total/maxCat)*100}%`:"0%",background:`linear-gradient(90deg,${cat.color},${cat.color}99)`,borderRadius:"3px",transitionDelay:`${0.2+i*.06}s`}}/>
-                </div>
-                <div style={{fontSize:"11px",color:t.mut,marginTop:"3px"}}>{totalOut>0?((cat.total/totalOut)*100).toFixed(0):0}% of total spending</div>
-              </div>
-            ))
-          }
-        </div>
-
-        {/* 6-month trend */}
-        <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"22px",transitionDelay:"0.2s"}}>
-          <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"16px"}}>6-Month Trend</div>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={trendMonths} margin={{top:4,right:4,left:0,bottom:4}}>
-              <XAxis dataKey="month" tick={{fill:t.mut,fontSize:11}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fill:t.mut,fontSize:11}} axisLine={false} tickLine={false} tickFormatter={v=>`$${(v/1000).toFixed(0)}k`}/>
-              <Tooltip content={p=><CTip {...p} dark={dark}/>}/>
-              <Bar dataKey="expenses" name="Expenses" stackId="a" fill={t.wrn} opacity={.85}/>
-              <Bar dataKey="fees"     name="Fees"     stackId="a" fill={t.dan} opacity={.85} radius={[4,4,0,0]}/>
-            </BarChart>
-          </ResponsiveContainer>
-          <div style={{display:"flex",gap:"16px",marginTop:"8px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:"5px"}}><div style={{width:"10px",height:"10px",borderRadius:"2px",background:t.wrn}}/><span style={{fontSize:"11px",color:t.mut}}>Expenses</span></div>
-            <div style={{display:"flex",alignItems:"center",gap:"5px"}}><div style={{width:"10px",height:"10px",borderRadius:"2px",background:t.dan}}/><span style={{fontSize:"11px",color:t.mut}}>Fees</span></div>
+                );
+              })
+            }
           </div>
-        </div>
-      </div>
 
-      {/* ── Plaid banner ── */}
-      <div className={`fi ${animIn?"on":""}`} style={{background:dark?"#0d0d1a":"#f5f3ff",border:`1.5px solid #7b8cff44`,borderRadius:"14px",padding:"14px 20px",marginBottom:"16px",display:"flex",alignItems:"center",gap:"14px",transitionDelay:"0.25s"}}>
-        <div style={{width:"36px",height:"36px",borderRadius:"10px",background:"linear-gradient(135deg,#7b8cff,#a259ff)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}>🏦</div>
-        <div style={{flex:1}}>
-          <div style={{fontSize:"13px",fontWeight:700,color:t.txt,marginBottom:"2px"}}>Auto-import with Plaid</div>
-          <div style={{fontSize:"12px",color:t.mut}}>Connect your bank to automatically pull expenses and fees — no manual entry needed. Coming soon.</div>
-        </div>
-        <button className="btn" style={{background:"linear-gradient(135deg,#7b8cff,#a259ff)",color:"#fff",padding:"8px 18px",fontSize:"12px",fontWeight:700,borderRadius:"8px",whiteSpace:"nowrap"}}>Connect Bank</button>
-      </div>
-
-      {/* ── Transaction list ── */}
-      <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"22px",transitionDelay:"0.3s"}}>
-        {/* Header + filters */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",flexWrap:"wrap",gap:"10px"}}>
-          <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase"}}>
-            Transactions <span style={{color:t.fnt,fontWeight:500}}>({filtered.length})</span>
-          </div>
-          <div style={{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}}>
-            <div style={{display:"flex",background:t.inp,borderRadius:"8px",padding:"3px",border:`1px solid ${t.brd}`}}>
-              {[["all","All"],["expense","Expenses"],["fee","Fees"]].map(([v,l])=>(
-                <button key={v} className="btn" onClick={()=>setFilterType(v)} style={{padding:"5px 12px",fontSize:"12px",fontWeight:600,background:filterType===v?t.crd:"transparent",color:filterType===v?t.txt:t.mut,borderRadius:"6px",border:filterType===v?`1px solid ${t.brd}`:"none"}}>
-                  {l}
-                </button>
-              ))}
-            </div>
-            <select value={filterCat} onChange={e=>setFilterCat(e.target.value)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.txt,padding:"7px 12px",fontSize:"12px",borderRadius:"8px",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif",fontWeight:600}}>
-              <option value="all">All Categories</option>
-              {EXP_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
-            </select>
-            <button className="btn" onClick={()=>{setShowAdd(v=>!v);setEditId(null);}} style={{background:showAdd?"transparent":t.acc,color:showAdd?t.mut:"#fff",padding:"8px 18px",fontSize:"13px",fontWeight:700,borderRadius:"8px",border:showAdd?`1.5px solid ${t.brd}`:"none"}}>
-              {showAdd?"Cancel":"+ Add Expense"}
-            </button>
-          </div>
-        </div>
-
-        {/* ── ADD FORM ── */}
-        {showAdd&&(
-          <div style={{background:t.inp,border:`1.5px solid ${t.acc}55`,borderRadius:"14px",padding:"20px",marginBottom:"16px"}}>
-            <div style={{fontSize:"12px",color:t.acc,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"14px"}}>New Transaction</div>
-            <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"2fr 1fr 1fr",gap:"10px",marginBottom:"12px"}}>
-              <div>
-                <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"5px"}}>NAME</div>
-                <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="e.g. Adobe Premiere, Stripe fees…" style={inp}/>
-              </div>
-              <div>
-                <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"5px"}}>AMOUNT ($)</div>
-                <input value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0.00" type="number" style={inp}/>
-              </div>
-              <div>
-                <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"5px"}}>TYPE</div>
-                <div style={{display:"flex",gap:"4px"}}>
-                  {[["expense","Expense"],["fee","Fee"]].map(([v,l])=>(
-                    <button key={v} className="btn" onClick={()=>setForm({...form,type:v})} style={{flex:1,padding:"10px 6px",fontSize:"12px",fontWeight:600,background:form.type===v?t.txt:t.crd,color:form.type===v?t.bg:t.mut,border:`1.5px solid ${form.type===v?t.txt:t.brd}`,borderRadius:"8px"}}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
+          {/* Footer */}
+          {monthExp.length>0&&(
+            <div style={{marginTop:"14px",padding:"12px 16px",background:t.inp,border:`1.5px solid ${t.brd}`,borderRadius:"10px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"8px"}}>
+              <span style={{fontSize:"13px",color:t.mut}}>{monthExp.length} transactions</span>
+              <div style={{display:"flex",gap:"16px"}}>
+                <span style={{fontSize:"13px",color:t.wrn,fontWeight:700}}>Expenses: ${totalExpenses.toLocaleString()}</span>
+                <span style={{fontSize:"13px",color:t.dan,fontWeight:700}}>Fees: ${totalFees.toLocaleString()}</span>
+                <span style={{fontSize:"14px",color:t.txt,fontWeight:800}}>Total: ${totalOut.toLocaleString()}</span>
               </div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"1fr 1fr",gap:"10px",marginBottom:"12px"}}>
-              <div>
-                <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"5px"}}>CATEGORY</div>
-                <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})} style={inp}>
-                  {EXP_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"5px"}}>NOTE (optional)</div>
-                <input value={form.note} onChange={e=>setForm({...form,note:e.target.value})} placeholder="Context or tag…" style={inp}/>
+          )}
+        </div>
+      )}
+
+      {/* ── VIEW: ADD EXPENSE ── */}
+      {activeView==="add"&&(
+        <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"24px",transitionDelay:"0.1s"}}>
+          <div style={{fontSize:"16px",fontWeight:700,color:t.txt,marginBottom:"20px"}}>Add New Expense</div>
+
+          {/* Name + Amount + Type */}
+          <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"2fr 1fr 1fr",gap:"12px",marginBottom:"14px"}}>
+            <div>
+              <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"6px"}}>NAME</div>
+              <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="e.g. Adobe Premiere, Stripe fees…" style={inp}/>
+            </div>
+            <div>
+              <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"6px"}}>AMOUNT ($)</div>
+              <input value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0.00" type="number" style={inp}/>
+            </div>
+            <div>
+              <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"6px"}}>TYPE</div>
+              <div style={{display:"flex",gap:"6px"}}>
+                {[["expense","Expense"],["fee","Fee"]].map(([v,l])=>(
+                  <button key={v} className="btn" onClick={()=>setForm({...form,type:v})} style={{flex:1,padding:"10px 4px",fontSize:"12px",fontWeight:600,background:form.type===v?t.txt:t.inp,color:form.type===v?t.bg:t.mut,border:`1.5px solid ${form.type===v?t.txt:t.brd}`,borderRadius:"8px"}}>
+                    {l}
+                  </button>
+                ))}
               </div>
             </div>
-            {/* Recurring section */}
-            <div style={{background:form.recurring?`${t.acc}10`:t.crd,border:`1.5px solid ${form.recurring?t.acc:t.brd}`,borderRadius:"10px",padding:"14px",marginBottom:"14px",transition:"all .2s"}}>
+          </div>
+
+          {/* Category + Note */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"14px"}}>
+            <div>
+              <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"6px"}}>CATEGORY</div>
+              <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})} style={inp}>
+                {EXP_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"6px"}}>NOTE (optional)</div>
+              <input value={form.note} onChange={e=>setForm({...form,note:e.target.value})} placeholder="Context or tag…" style={inp}/>
+            </div>
+          </div>
+
+          {/* Recurring + Tax deduction */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"18px"}}>
+            {/* Recurring */}
+            <div style={{background:form.recurring?`${t.acc}10`:t.inp,border:`1.5px solid ${form.recurring?t.acc:t.brd}`,borderRadius:"12px",padding:"14px",transition:"all .2s"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:form.recurring?"12px":"0"}}>
-                <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-                  <span style={{fontSize:"16px"}}>🔁</span>
-                  <div>
-                    <div style={{fontSize:"13px",fontWeight:700,color:t.txt}}>Recurring expense?</div>
-                    <div style={{fontSize:"11px",color:t.mut}}>Auto-adds to each matching period</div>
-                  </div>
+                <div>
+                  <div style={{fontSize:"13px",fontWeight:700,color:t.txt}}>🔁 Recurring</div>
+                  <div style={{fontSize:"11px",color:t.mut}}>Auto-adds each period</div>
                 </div>
-                <button className="btn" onClick={()=>setForm({...form,recurring:!form.recurring})} style={{padding:"7px 16px",fontSize:"12px",fontWeight:700,background:form.recurring?t.acc:"transparent",color:form.recurring?"#fff":t.mut,border:`1.5px solid ${form.recurring?t.acc:t.brd}`,borderRadius:"8px"}}>
+                <button className="btn" onClick={()=>setForm({...form,recurring:!form.recurring})} style={{padding:"6px 14px",fontSize:"12px",fontWeight:700,background:form.recurring?t.acc:"transparent",color:form.recurring?"#fff":t.mut,border:`1.5px solid ${form.recurring?t.acc:t.brd}`,borderRadius:"7px"}}>
                   {form.recurring?"✓ On":"Off"}
                 </button>
               </div>
               {form.recurring&&(
                 <div>
-                  <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"7px"}}>FREQUENCY</div>
+                  <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"6px"}}>FREQUENCY</div>
                   <FreqPicker val={form.recurringFreq} onChange={v=>setForm({...form,recurringFreq:v})}/>
-                  <div style={{marginTop:"8px",fontSize:"11px",color:t.acc}}>
-                    {form.recurringFreq==="monthly"&&"Will appear every month starting from when added"}
-                    {form.recurringFreq==="quarterly"&&"Will appear every 3 months (Jan, Apr, Jul, Oct pattern)"}
-                    {form.recurringFreq==="yearly"&&"Will appear once per year in the same month"}
+                  <div style={{marginTop:"6px",fontSize:"11px",color:t.acc}}>
+                    {form.recurringFreq==="monthly"&&"Every month"}
+                    {form.recurringFreq==="quarterly"&&"Every 3 months"}
+                    {form.recurringFreq==="yearly"&&"Once per year"}
                   </div>
                 </div>
               )}
             </div>
-            {/* Tax deduction toggle */}
-            <div onClick={()=>setForm({...form,taxDeduction:!form.taxDeduction})} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:form.taxDeduction?`${t.acc}10`:t.crd,border:`1.5px solid ${form.taxDeduction?t.acc:t.brd}`,borderRadius:"10px",padding:"12px 16px",marginBottom:"14px",cursor:"pointer",transition:"all .2s"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-                <span style={{fontSize:"18px"}}>🧾</span>
-                <div>
-                  <div style={{fontSize:"13px",fontWeight:700,color:t.txt}}>Count as Tax Deduction</div>
-                  <div style={{fontSize:"11px",color:t.mut}}>Auto-adds to your Business Deductions in the Tax Estimator</div>
+
+            {/* Tax deduction */}
+            <div onClick={()=>setForm({...form,taxDeduction:!form.taxDeduction})} style={{display:"flex",flexDirection:"column",justifyContent:"center",background:form.taxDeduction?`${t.acc}10`:t.inp,border:`1.5px solid ${form.taxDeduction?t.acc:t.brd}`,borderRadius:"12px",padding:"14px",cursor:"pointer",transition:"all .2s"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"6px"}}>
+                <div style={{fontSize:"13px",fontWeight:700,color:t.txt}}>🧾 Tax Deductible</div>
+                <div style={{width:"36px",height:"20px",borderRadius:"10px",background:form.taxDeduction?t.acc:t.fnt,transition:"background .2s",position:"relative",flexShrink:0}}>
+                  <div style={{position:"absolute",top:"3px",left:form.taxDeduction?"18px":"3px",width:"14px",height:"14px",borderRadius:"50%",background:"#fff",transition:"left .2s"}}/>
                 </div>
               </div>
-              <div style={{width:"40px",height:"22px",borderRadius:"11px",background:form.taxDeduction?t.acc:t.fnt,transition:"background .2s",position:"relative",flexShrink:0}}>
-                <div style={{position:"absolute",top:"3px",left:form.taxDeduction?"20px":"3px",width:"16px",height:"16px",borderRadius:"50%",background:"#fff",transition:"left .2s"}}/>
-              </div>
-            </div>
-            <div style={{display:"flex",gap:"10px"}}>
-              <button className="btn" onClick={addExpense} style={{background:t.acc,color:"#fff",padding:"11px 28px",fontSize:"14px",fontWeight:700,borderRadius:"10px"}}>
-                Add Expense →
-              </button>
-              <button className="btn" onClick={()=>setShowAdd(false)} style={{background:"transparent",border:`1.5px solid ${t.brd}`,color:t.mut,padding:"11px 20px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>
-                Cancel
-              </button>
+              <div style={{fontSize:"11px",color:t.mut}}>Auto-flows into Tax Estimator</div>
             </div>
           </div>
-        )}
 
-        {/* ── TRANSACTION ROWS ── */}
-        <div style={{maxHeight:"520px",overflowY:"auto"}}>
-          {filtered.length===0
-            ?<div style={{textAlign:"center",padding:"36px 0",color:t.fnt,fontSize:"14px"}}>No transactions match this filter</div>
-            :filtered.sort((a,b)=>new Date(b.date+"T12:00:00")-new Date(a.date+"T12:00:00")).map(e=>{
-              const cat=getCat(e.category);
-              const isEditing=editId===e.id;
-              return(
-                <div key={e._virtual?`v-${e.id}`:e.id}>
-                  {/* ── VIEW ROW ── */}
-                  {!isEditing&&(
-                    <div className="hr" style={{display:"flex",alignItems:"center",gap:"12px",padding:"12px 8px",borderBottom:`1px solid ${t.fnt}`,borderRadius:"8px",transition:"background .13s"}}>
-                      <div style={{width:"38px",height:"38px",borderRadius:"10px",background:`${cat.color}22`,border:`1.5px solid ${cat.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}>
-                        {cat.icon}
-                      </div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:"flex",alignItems:"center",gap:"7px",marginBottom:"3px",flexWrap:"wrap"}}>
-                          <span style={{fontSize:"14px",fontWeight:600,color:t.txt}}>{e.name}</span>
-                          {e._virtual&&<span style={{fontSize:"10px",fontWeight:700,color:"#7b8cff",background:"#7b8cff18",padding:"1px 7px",borderRadius:"5px"}}>AUTO</span>}
-                          {e.recurring&&e.recurringFreq&&(
-                            <span style={{fontSize:"10px",fontWeight:700,color:t.acc,background:`${t.acc}18`,padding:"1px 7px",borderRadius:"5px"}}>
-                              🔁 {FREQ_LABELS[e.recurringFreq]||"Recurring"}
-                            </span>
-                          )}
-                          <span style={{fontSize:"10px",fontWeight:700,color:e.type==="fee"?t.dan:t.wrn,background:e.type==="fee"?`${t.dan}18`:`${t.wrn}18`,padding:"1px 7px",borderRadius:"5px"}}>
-                            {e.type==="fee"?"FEE":"EXPENSE"}
-                          </span>
-                          {e.taxDeduction&&<span style={{fontSize:"10px",fontWeight:700,color:"#00b894",background:"#00b89418",padding:"1px 7px",borderRadius:"5px"}}>🧾 DEDUCTIBLE</span>}
-                        </div>
-                        <div style={{display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap"}}>
-                          <span style={{fontSize:"12px",color:cat.color,fontWeight:500}}>{cat.icon} {cat.label}</span>
-                          {e.note&&<span style={{fontSize:"12px",color:t.mut}}>· {e.note}</span>}
-                          <span style={{fontSize:"11px",color:t.fnt}}>{new Date(e.date+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
-                        </div>
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:"8px",flexShrink:0}}>
-                        <span style={{fontFamily:"'Outfit',sans-serif",fontSize:"17px",fontWeight:800,color:e.type==="fee"?t.dan:t.wrn}}>
-                          -${e.amount.toLocaleString()}
-                        </span>
-                        <button className="btn" onClick={()=>startEdit(e)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,fontSize:"11px",fontWeight:600,padding:"5px 10px",borderRadius:"6px"}}>Edit</button>
-                        <button className="db btn" onClick={()=>deleteExpense(e.id,e._virtual)} style={{background:"transparent",color:t.dan,fontSize:"18px",padding:"2px 6px",borderRadius:"6px"}}>×</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── INLINE EDIT ROW ── */}
-                  {isEditing&&editForm&&(
-                    <div style={{background:t.inp,border:`1.5px solid ${t.acc}55`,borderRadius:"14px",padding:"16px",marginBottom:"4px",marginTop:"2px"}}>
-                      <div style={{fontSize:"11px",color:t.acc,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"12px"}}>Edit Transaction</div>
-                      <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"2fr 1fr 1fr",gap:"8px",marginBottom:"10px"}}>
-                        <div>
-                          <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"4px"}}>NAME</div>
-                          <input value={editForm.name} onChange={e=>setEditForm({...editForm,name:e.target.value})} style={inp}/>
-                        </div>
-                        <div>
-                          <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"4px"}}>AMOUNT ($)</div>
-                          <input value={editForm.amount} onChange={e=>setEditForm({...editForm,amount:e.target.value})} type="number" style={inp}/>
-                        </div>
-                        <div>
-                          <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"4px"}}>TYPE</div>
-                          <div style={{display:"flex",gap:"4px"}}>
-                            {[["expense","Expense"],["fee","Fee"]].map(([v,l])=>(
-                              <button key={v} className="btn" onClick={()=>setEditForm({...editForm,type:v})} style={{flex:1,padding:"10px 4px",fontSize:"11px",fontWeight:600,background:editForm.type===v?t.txt:t.crd,color:editForm.type===v?t.bg:t.mut,border:`1.5px solid ${editForm.type===v?t.txt:t.brd}`,borderRadius:"7px"}}>
-                                {l}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"1fr 1fr",gap:"8px",marginBottom:"10px"}}>
-                        <div>
-                          <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"4px"}}>CATEGORY</div>
-                          <select value={editForm.category} onChange={e=>setEditForm({...editForm,category:e.target.value})} style={inp}>
-                            {EXP_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"4px"}}>NOTE</div>
-                          <input value={editForm.note} onChange={e=>setEditForm({...editForm,note:e.target.value})} placeholder="Context or tag…" style={inp}/>
-                        </div>
-                      </div>
-                      {/* Recurring edit */}
-                      <div style={{background:editForm.recurring?`${t.acc}10`:t.crd,border:`1.5px solid ${editForm.recurring?t.acc:t.brd}`,borderRadius:"10px",padding:"12px",marginBottom:"12px",transition:"all .2s"}}>
-                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:editForm.recurring?"10px":"0"}}>
-                          <span style={{fontSize:"13px",fontWeight:700,color:t.txt}}>🔁 Recurring</span>
-                          <button className="btn" onClick={()=>setEditForm({...editForm,recurring:!editForm.recurring})} style={{padding:"6px 14px",fontSize:"12px",fontWeight:700,background:editForm.recurring?t.acc:"transparent",color:editForm.recurring?"#fff":t.mut,border:`1.5px solid ${editForm.recurring?t.acc:t.brd}`,borderRadius:"7px"}}>
-                            {editForm.recurring?"✓ On":"Off"}
-                          </button>
-                        </div>
-                        {editForm.recurring&&(
-                          <FreqPicker val={editForm.recurringFreq||"monthly"} onChange={v=>setEditForm({...editForm,recurringFreq:v})}/>
-                        )}
-                      </div>
-                      {/* Tax deduction toggle */}
-                      <div onClick={()=>setEditForm({...editForm,taxDeduction:!editForm.taxDeduction})} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:editForm.taxDeduction?`${t.acc}10`:t.crd,border:`1.5px solid ${editForm.taxDeduction?t.acc:t.brd}`,borderRadius:"10px",padding:"10px 14px",marginBottom:"10px",cursor:"pointer",transition:"all .2s"}}>
-                        <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                          <span style={{fontSize:"16px"}}>🧾</span>
-                          <div>
-                            <div style={{fontSize:"12px",fontWeight:700,color:t.txt}}>Tax Deduction</div>
-                            <div style={{fontSize:"11px",color:t.mut}}>Flows into Tax Estimator automatically</div>
-                          </div>
-                        </div>
-                        <div style={{width:"36px",height:"20px",borderRadius:"10px",background:editForm.taxDeduction?t.acc:t.fnt,transition:"background .2s",position:"relative",flexShrink:0}}>
-                          <div style={{position:"absolute",top:"3px",left:editForm.taxDeduction?"17px":"3px",width:"14px",height:"14px",borderRadius:"50%",background:"#fff",transition:"left .2s"}}/>
-                        </div>
-                      </div>
-                      <div style={{display:"flex",gap:"8px"}}>
-                        <button className="btn" onClick={()=>saveEdit(e.id)} style={{background:t.acc,color:"#fff",padding:"9px 22px",fontSize:"13px",fontWeight:700,borderRadius:"8px"}}>Save Changes ✓</button>
-                        <button className="btn" onClick={cancelEdit} style={{background:"transparent",border:`1.5px solid ${t.brd}`,color:t.mut,padding:"9px 18px",fontSize:"13px",fontWeight:600,borderRadius:"8px"}}>Cancel</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          }
+          {/* Submit */}
+          <div style={{display:"flex",gap:"10px"}}>
+            <button className="btn" onClick={addExpense} disabled={!form.name||!form.amount} style={{background:(form.name&&form.amount)?t.acc:"#444",color:"#fff",padding:"12px 32px",fontSize:"14px",fontWeight:700,borderRadius:"10px"}}>
+              Add Expense →
+            </button>
+            <button className="btn" onClick={()=>{setForm(BLANK);setActiveView("overview");}} style={{background:"transparent",border:`1.5px solid ${t.brd}`,color:t.mut,padding:"12px 20px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>
+              Cancel
+            </button>
+          </div>
         </div>
-
-        {/* Footer totals */}
-        {filtered.length>0&&(
-          <div style={{marginTop:"14px",padding:"14px 16px",background:t.inp,border:`1.5px solid ${t.brd}`,borderRadius:"10px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"10px"}}>
-            <span style={{fontSize:"13px",color:t.mut,fontWeight:500}}>{filtered.length} transactions</span>
-            <div style={{display:"flex",gap:"20px"}}>
-              <span style={{fontSize:"13px",color:t.wrn,fontWeight:700}}>Expenses: ${filtered.filter(e=>e.type==="expense").reduce((s,e)=>s+e.amount,0).toLocaleString()}</span>
-              <span style={{fontSize:"13px",color:t.dan,fontWeight:700}}>Fees: ${filtered.filter(e=>e.type==="fee").reduce((s,e)=>s+e.amount,0).toLocaleString()}</span>
-              <span style={{fontSize:"14px",color:t.txt,fontWeight:800}}>Total: ${filtered.reduce((s,e)=>s+e.amount,0).toLocaleString()}</span>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
 
+
+// ─── PRICING TAB ─────────────────────────────────────────────────────────────
+function PricingTab({dark,currentPlan,onUpgrade,authUser,t}){
+  const w=useW();
+  const [animIn,setAnimIn]=useState(false);
+  const [billing,setBilling]=useState("monthly"); // monthly | yearly
+  useEffect(()=>{setTimeout(()=>setAnimIn(true),60);},[]);
+
+  const yearlyDiscount=0.2; // 20% off yearly
+
+  const tiers=[
+    {
+      id:"free",
+      name:"Free",
+      icon:"🌱",
+      price:{monthly:0, yearly:0},
+      color:"#60607a",
+      desc:"Perfect for creators just starting out",
+      features:[
+        "Track 1 income platform",
+        "Full expense tracking",
+        "Live tax estimator",
+        "Dashboard & yearly charts",
+        "CSV export",
+        "Secure cloud data sync",
+      ],
+      cta:"Current Plan",
+      highlight:false,
+    },
+    {
+      id:"pro",
+      name:"Gold",
+      icon:"⭐",
+      price:{monthly:12, yearly:9},
+      color:"#f5a623",
+      desc:"For creators with multiple income streams",
+      features:[
+        "Everything in Free",
+        "Track up to 5 platforms",
+        "Smart Import (screenshots & CSV)",
+        "Recurring expense automation",
+        "Tax deduction tracking",
+        "Priority support",
+      ],
+      cta:"Upgrade to Gold",
+      highlight:true,
+    },
+    {
+      id:"business",
+      name:"Platinum",
+      icon:"💎",
+      price:{monthly:29, yearly:22},
+      color:"#a259ff",
+      desc:"For full-time creators & agencies",
+      features:[
+        "Everything in Gold",
+        "Unlimited platforms",
+        "Multi-year analytics",
+        "Quarterly tax payment reminders",
+        "Early access to new features",
+        "Dedicated support",
+      ],
+      cta:"Upgrade to Platinum",
+      highlight:false,
+    },
+  ];
+
+  const currentP=PLANS[currentPlan]||PLANS.free;
+
+  return(
+    <div style={{maxWidth:"960px",margin:"0 auto"}}>
+      {/* Header */}
+      <div className={`fi ${animIn?"on":""}`} style={{textAlign:"center",marginBottom:"40px"}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:"8px",background:`${t.acc}18`,border:`1.5px solid ${t.acc}44`,padding:"7px 18px",borderRadius:"100px",fontSize:"13px",fontWeight:700,color:t.acc,marginBottom:"20px"}}>
+          ✦ Simple, creator-friendly pricing
+        </div>
+        <div style={{fontFamily:"'Outfit',sans-serif",fontSize:w<600?"32px":"48px",fontWeight:800,color:t.txt,marginBottom:"12px",lineHeight:1.1}}>
+          Pricing that grows<br/>with your income
+        </div>
+        <p style={{fontSize:"16px",color:t.mut,maxWidth:"500px",margin:"0 auto 24px",lineHeight:1.7}}>
+          Start free and upgrade when you need more. No hidden fees, cancel anytime.
+        </p>
+        {/* Billing toggle */}
+        <div style={{display:"inline-flex",background:t.inp,borderRadius:"10px",padding:"4px",border:`1.5px solid ${t.brd}`,gap:"4px"}}>
+          {[["monthly","Monthly"],["yearly","Yearly · 20% off"]].map(([v,l])=>(
+            <button key={v} className="btn" onClick={()=>setBilling(v)} style={{padding:"8px 20px",fontSize:"13px",fontWeight:600,background:billing===v?t.crd:"transparent",color:billing===v?t.txt:t.mut,borderRadius:"7px",border:billing===v?`1.5px solid ${t.brd}`:"none"}}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Plan cards */}
+      <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":w<1000?"1fr 1fr":"repeat(3,1fr)",gap:"16px",marginBottom:"48px"}}>
+        {tiers.map((tier,i)=>{
+          const isCurrent=currentPlan===tier.id;
+          const price=billing==="yearly"?tier.price.yearly:tier.price.monthly;
+          return(
+            <div key={tier.id} className={`fi card ${animIn?"on":""}`} style={{
+              background:tier.id==="business"?`linear-gradient(135deg,#e8e8f022,#c0b8d008)`:tier.highlight?`linear-gradient(135deg,${tier.color}18,${tier.color}06)`:t.crd,
+              border:`2px solid ${isCurrent?tier.color:tier.highlight?tier.color+"66":t.cbrd}`,
+              borderRadius:"20px",padding:"28px 24px",
+              transitionDelay:`${i*.08}s`,
+              position:"relative",overflow:"hidden",
+            }}>
+              {tier.highlight&&(
+                <div style={{position:"absolute",top:"16px",right:"16px",background:`linear-gradient(135deg,${tier.color},#00a87a)`,color:"#fff",fontSize:"11px",fontWeight:800,padding:"4px 12px",borderRadius:"100px",letterSpacing:"0.5px"}}>
+                  MOST POPULAR
+                </div>
+              )}
+              {isCurrent&&(
+                <div style={{position:"absolute",top:"16px",right:"16px",background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,fontSize:"11px",fontWeight:700,padding:"4px 12px",borderRadius:"100px"}}>
+                  CURRENT PLAN
+                </div>
+              )}
+              <div style={{fontSize:"28px",marginBottom:"12px"}}>{tier.icon}</div>
+              <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"22px",fontWeight:800,color:t.txt,marginBottom:"4px"}}>{tier.name}</div>
+              <div style={{fontSize:"13px",color:t.mut,marginBottom:"20px"}}>{tier.desc}</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:"4px",marginBottom:"24px"}}>
+                <span style={{fontFamily:"'Outfit',sans-serif",fontSize:"42px",fontWeight:800,color:price===0?t.mut:tier.color,lineHeight:1}}>
+                  {price===0?"Free":`$${price}`}
+                </span>
+                {price>0&&<span style={{fontSize:"14px",color:t.mut,fontWeight:500}}>/mo{billing==="yearly"?" billed yearly":""}</span>}
+              </div>
+              <button className="btn" onClick={()=>!isCurrent&&onUpgrade(tier.id)} style={{
+                width:"100%",padding:"13px",fontSize:"14px",fontWeight:700,borderRadius:"12px",marginBottom:"24px",
+                background:isCurrent?"transparent":tier.highlight?`linear-gradient(135deg,${tier.color},#00a87a)`:t.inp,
+                color:isCurrent?t.mut:tier.highlight?"#fff":t.txt,
+                border:isCurrent?`1.5px solid ${t.brd}`:tier.highlight?"none":`1.5px solid ${t.brd}`,
+                cursor:isCurrent?"default":"pointer",
+                boxShadow:tier.highlight&&!isCurrent?`0 8px 24px ${tier.color}44`:"none",
+              }}>
+                {isCurrent?"✓ "+tier.cta.replace("Upgrade to ",""):!authUser?"Sign Up Free →":tier.id==="free"?"Current Plan":tier.cta+" →"}
+              </button>
+              <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+                {tier.features.map(f=>(
+                  <div key={f} style={{display:"flex",alignItems:"center",gap:"10px"}}>
+                    <div style={{width:"18px",height:"18px",borderRadius:"50%",background:`${tier.color}22`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:"10px",color:tier.color,fontWeight:700}}>✓</div>
+                    <span style={{fontSize:"13px",color:t.mut,lineHeight:1.4}}>{f}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* FAQ */}
+      <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"20px",padding:"32px",transitionDelay:"0.3s"}}>
+        <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"22px",fontWeight:800,color:t.txt,marginBottom:"24px",textAlign:"center"}}>Common Questions</div>
+        <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"1fr 1fr",gap:"24px"}}>
+          {[
+            ["Can I switch plans anytime?","Yes — upgrade or downgrade whenever you want. If you downgrade, you keep your data but the platform limit applies to new entries."],
+            ["What counts as a 'platform'?","Each unique income source counts — YouTube, Patreon, Sponsorship, Merch, etc. Affiliate links from the same platform count as one."],
+            ["Is my data safe?","Your data is stored in Supabase (enterprise-grade Postgres) with row-level security. Only you can see your data."],
+            ["When does payment start?","Payment isn't live yet — we're building the payment flow. Sign up now and you'll get early access pricing when it launches."],
+          ].map(([q,a])=>(
+            <div key={q}>
+              <div style={{fontSize:"14px",fontWeight:700,color:t.txt,marginBottom:"6px"}}>{q}</div>
+              <div style={{fontSize:"13px",color:t.mut,lineHeight:1.7}}>{a}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function App(){
@@ -2260,6 +2521,7 @@ export default function App(){
   const [userProfile,setUserProfile]=useState({name:"",state:"",filingStatus:"single"});
   const [expenses,setExpenses]=useState([]);
   const [authUser,setAuthUser]=useState(null);      // real Supabase auth user
+  const [plan,setPlan]=useState("free");               // free | pro | business
   const [loading,setLoading]=useState(true);         // true while checking auth + loading data
   const [dbError,setDbError]=useState(null);         // surface any load errors
 
@@ -2455,6 +2717,7 @@ export default function App(){
     {id:"expenses", label:"Expenses & Fees"},
     {id:"taxes",    label:"Tax Estimator"},
     {id:"import",   label:importCount>0?`Smart Import · ${importCount}`:"Smart Import"},
+    {id:"pricing",  label:"⚡ Plans"},
   ];
 
   // ── Full-screen loading spinner ───────────────────────────────────────────
@@ -2483,12 +2746,37 @@ export default function App(){
           </div>
           <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
             <button className="btn" onClick={()=>setDark(d=>!d)} style={{background:t.crd,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>{dark?"☀ Light":"◑ Dark"}</button>
+            <button className="btn" onClick={()=>setPage("pricing")} style={{background:"transparent",border:"none",color:t.mut,padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>Pricing</button>
             <button className="btn" onClick={()=>setPage("login")} style={{background:t.crd,border:`1.5px solid ${t.brd}`,color:t.txt,padding:"8px 18px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>Log In</button>
             <button className="btn" onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${t.acc},#00a87a)`,color:"#fff",padding:"9px 20px",fontSize:"13px",fontWeight:700,borderRadius:"10px",boxShadow:`0 4px 16px ${t.glo}`}}>Get Started →</button>
           </div>
         </div>
       </div>
       <div style={{paddingTop:"64px"}}><LandingPage dark={dark} onEnter={()=>setPage("login")} t={t}/></div>
+    </>
+  );
+
+  // ── Pricing page (standalone) ──
+  if(page==="pricing") return(
+    <>
+      <GlobalCSS dark={dark}/>
+      <div style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:`${t.bg}f0`,borderBottom:`1px solid ${t.brd}`,backdropFilter:"blur(14px)"}}>
+        <div style={{maxWidth:"1000px",margin:"0 auto",padding:"14px 32px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"10px",cursor:"pointer"}} onClick={()=>setPage("landing")}>
+            <span style={{fontFamily:"'Outfit',sans-serif",fontSize:"20px",fontWeight:800,color:t.txt}}>CreatorFlow</span>
+          </div>
+          <div style={{display:"flex",gap:"10px"}}>
+            <button className="btn" onClick={()=>setPage("landing")} style={{background:t.crd,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>← Back</button>
+            <button className="btn" onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${t.acc},#00a87a)`,color:"#fff",padding:"9px 20px",fontSize:"13px",fontWeight:700,borderRadius:"10px"}}>Get Started →</button>
+          </div>
+        </div>
+      </div>
+      <div style={{paddingTop:"80px",paddingBottom:"60px",minHeight:"100vh",background:t.bg,color:t.txt}}>
+        <GlobalCSS dark={dark}/>
+        <div style={{padding:"0 24px"}}>
+          <PricingTab dark={dark} currentPlan="free" onUpgrade={()=>setPage("login")} authUser={null} t={t}/>
+        </div>
+      </div>
     </>
   );
 
@@ -2518,25 +2806,31 @@ export default function App(){
             <div style={{fontSize:"11px",color:t.mut,fontWeight:500,lineHeight:1.1,marginTop:"1px"}}>Income Tracker</div>
           </div>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-          {userProfile.name&&userProfile.name!=="Guest"&&(
-            <div style={{display:"flex",alignItems:"center",gap:"8px",background:t.inp,border:`1.5px solid ${t.brd}`,padding:"7px 14px",borderRadius:"10px"}}>
-              <div style={{width:"26px",height:"26px",borderRadius:"8px",background:`linear-gradient(135deg,${t.acc},#7b8cff)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800,color:"#fff",flexShrink:0}}>
-                {userProfile.name[0]?.toUpperCase()}
-              </div>
-              <span style={{fontSize:"14px",fontWeight:600,color:t.txt}}>{userProfile.name}</span>
-              {userProfile.state&&w>=600&&<span style={{fontSize:"12px",color:t.mut}}>· {userProfile.state}</span>}
+        <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+          {/* Plan badge — clickable */}
+          {authUser&&(
+            <div onClick={()=>setTab("pricing")} style={{cursor:"pointer",background:PLANS[plan].color+"22",border:`1.5px solid ${PLANS[plan].color}44`,padding:"5px 11px",borderRadius:"7px"}}>
+              <span style={{fontSize:"11px",fontWeight:800,color:PLANS[plan].color,letterSpacing:"0.5px"}}>{PLANS[plan].badge}</span>
             </div>
           )}
-          <div style={{display:"flex",alignItems:"center",gap:"6px",background:t.inp,padding:"6px 12px",borderRadius:"8px",border:`1px solid ${t.brd}`}}>
-            <div className="ld" style={{width:"7px",height:"7px",borderRadius:"50%",background:t.acc}}/>
-            <span style={{fontSize:"12px",color:t.mut,fontWeight:600}}>{authUser?"Synced":"Guest"}</span>
-          </div>
-          {w>=600&&<button className="btn" onClick={()=>exportCSV(entries,null)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>↓ Export</button>}
-          <button className="btn" onClick={()=>setDark(d=>!d)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>{dark?"☀ Light":"◑ Dark"}</button>
+          {/* Avatar + name — compact */}
+          {userProfile.name&&userProfile.name!=="Guest"&&(
+            <div style={{display:"flex",alignItems:"center",gap:"7px",background:t.inp,border:`1.5px solid ${t.brd}`,padding:"6px 12px",borderRadius:"10px"}}>
+              <div style={{width:"24px",height:"24px",borderRadius:"7px",background:`linear-gradient(135deg,${t.acc},#7b8cff)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:800,color:"#fff",flexShrink:0}}>
+                {userProfile.name[0]?.toUpperCase()}
+              </div>
+              <div>
+                <div style={{fontSize:"13px",fontWeight:600,color:t.txt}}>{userProfile.name}</div>
+                {userProfile.state&&<div style={{fontSize:"11px",color:t.mut,marginTop:"1px"}}>{userProfile.state}</div>}
+              </div>
+            </div>
+          )}
+          {/* Dark mode */}
+          <button className="btn" onClick={()=>setDark(d=>!d)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"8px 12px",fontSize:"13px",borderRadius:"10px"}}>{dark?"☀":"◑"}</button>
+          {/* Log out / Log in */}
           {authUser
-            ?<button className="btn" onClick={handleLogout} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"9px 18px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>Log Out</button>
-            :<button className="btn" onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${t.acc},#00a87a)`,color:"#fff",padding:"9px 18px",fontSize:"13px",fontWeight:700,borderRadius:"10px"}}>Log In</button>
+            ?<button className="btn" onClick={handleLogout} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"8px 14px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>Log Out</button>
+            :<button className="btn" onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${t.acc},#00a87a)`,color:"#fff",padding:"8px 16px",fontSize:"13px",fontWeight:700,borderRadius:"10px"}}>Log In</button>
           }
         </div>
       </div>
@@ -2573,10 +2867,11 @@ export default function App(){
       {/* Content */}
       <div style={{padding:w<600?"16px 14px":"36px 40px",maxWidth:"1200px",margin:"0 auto"}}>
         {tab==="overview" &&<YearOverviewTab entries={entries} dark={dark} userProfile={userProfile}/>}
-        {tab==="monthly"  &&<MonthlyDetailTab entries={entries} setEntries={setEntries} dark={dark} selMonth={selMonth} setSelMonth={setSelMonth} selYear={SEL_YEAR} userProfile={userProfile} addEntry={addEntry} deleteEntry={deleteEntry}/>}
+        {tab==="monthly"  &&<MonthlyDetailTab entries={entries} setEntries={setEntries} dark={dark} selMonth={selMonth} setSelMonth={setSelMonth} selYear={SEL_YEAR} userProfile={userProfile} addEntry={addEntry} deleteEntry={deleteEntry} plan={plan} onUpgrade={()=>setTab("pricing")}/>}
         {tab==="expenses" &&<ExpensesTab entries={entries} dark={dark} selMonth={selMonth} selYear={SEL_YEAR} expenses={expenses} setExpenses={setExpenses} addExpense={addExpense} updateExpense={updateExpense} deleteExpense={deleteExpense}/>}
         {tab==="taxes"    &&<TaxTab entries={entries} dark={dark} userProfile={userProfile} onUpdateProfile={updateProfile} expenseDeductions={expenses.filter(e=>e.taxDeduction).reduce((s,e)=>s+e.amount,0)} expenseDedCount={expenses.filter(e=>e.taxDeduction).length}/>}
         {tab==="import"   &&<ImportTab onImport={handleImport} selMonth={selMonth} selYear={SEL_YEAR} t={t} dark={dark}/>}
+        {tab==="pricing"  &&<PricingTab dark={dark} currentPlan={plan} onUpgrade={p=>setPlan(p)} authUser={authUser} t={t}/>}
 
         {importCount>0&&tab==="import"&&(
           <div className="su" style={{marginTop:"20px",background:t.successBg,border:`1.5px solid ${t.acc}55`,borderRadius:"14px",padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
