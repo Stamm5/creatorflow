@@ -100,11 +100,15 @@ const SEED=[
   {id:201,platform:"YouTube",amount:980,month:0,year:2025,note:"Ad revenue"},{id:202,platform:"Patreon",amount:620,month:0,year:2025,note:"Members"},{id:203,platform:"Sponsorship",amount:1200,month:0,year:2025,note:"Brand deal"},
   {id:204,platform:"YouTube",amount:1050,month:1,year:2025,note:"Ad revenue"},{id:205,platform:"Patreon",amount:650,month:1,year:2025,note:"Members"},{id:206,platform:"Affiliate",amount:280,month:1,year:2025,note:"Amazon"},
   {id:207,platform:"YouTube",amount:1180,month:2,year:2025,note:"Ad revenue"},{id:208,platform:"Sponsorship",amount:2000,month:2,year:2025,note:"Brand deal"},{id:209,platform:"Patreon",amount:680,month:2,year:2025,note:"Members"},{id:210,platform:"Merch",amount:390,month:2,year:2025,note:"Spring drop"},
+  {id:211,platform:"YouTube",amount:1320,month:3,year:2025,note:"Ad revenue"},{id:212,platform:"Patreon",amount:710,month:3,year:2025,note:"Members"},{id:213,platform:"Affiliate",amount:340,month:3,year:2025,note:"Amazon"},
   {id:214,platform:"YouTube",amount:1420,month:4,year:2025,note:"Ad revenue"},{id:215,platform:"Sponsorship",amount:2500,month:4,year:2025,note:"Brand deal"},{id:216,platform:"Merch",amount:480,month:4,year:2025,note:"Spring drop"},{id:217,platform:"Patreon",amount:740,month:4,year:2025,note:"Members"},
+  {id:218,platform:"YouTube",amount:1380,month:5,year:2025,note:"Ad revenue"},{id:219,platform:"Patreon",amount:770,month:5,year:2025,note:"Members"},{id:220,platform:"Affiliate",amount:390,month:5,year:2025,note:"Amazon"},
   {id:221,platform:"YouTube",amount:1500,month:6,year:2025,note:"Ad revenue"},{id:222,platform:"Sponsorship",amount:3000,month:6,year:2025,note:"Brand deal"},{id:223,platform:"Merch",amount:560,month:6,year:2025,note:"Summer drop"},{id:224,platform:"Patreon",amount:800,month:6,year:2025,note:"Members"},
+  {id:225,platform:"YouTube",amount:1620,month:7,year:2025,note:"Ad revenue"},{id:226,platform:"Patreon",amount:830,month:7,year:2025,note:"Members"},{id:227,platform:"Affiliate",amount:410,month:7,year:2025,note:"Amazon"},
+  {id:228,platform:"YouTube",amount:1690,month:8,year:2025,note:"Ad revenue"},{id:229,platform:"Sponsorship",amount:2800,month:8,year:2025,note:"Brand deal"},{id:230,platform:"Patreon",amount:860,month:8,year:2025,note:"Members"},
   {id:231,platform:"YouTube",amount:1750,month:9,year:2025,note:"Ad revenue"},{id:232,platform:"Merch",amount:640,month:9,year:2025,note:"Fall drop"},{id:233,platform:"Affiliate",amount:440,month:9,year:2025,note:"Amazon"},{id:234,platform:"Patreon",amount:890,month:9,year:2025,note:"Members"},
-  {id:235,platform:"YouTube",amount:1900,month:10,year:2025,note:"Ad revenue"},{id:236,platform:"Sponsorship",amount:3500,month:10,year:2025,note:"Brand deal"},{id:237,platform:"Patreon",amount:920,month:10,year:2025,note:"Members"},
-  {id:238,platform:"YouTube",amount:2100,month:11,year:2025,note:"Ad revenue"},{id:239,platform:"Merch",amount:980,month:11,year:2025,note:"Holiday drop"},{id:241,platform:"Patreon",amount:950,month:11,year:2025,note:"Members"},
+  {id:235,platform:"YouTube",amount:1900,month:10,year:2025,note:"Ad revenue"},{id:236,platform:"Sponsorship",amount:3500,month:10,year:2025,note:"Brand deal"},{id:237,platform:"Patreon",amount:920,month:10,year:2025,note:"Members"},{id:240,platform:"Affiliate",amount:510,month:10,year:2025,note:"Amazon"},
+  {id:238,platform:"YouTube",amount:2100,month:11,year:2025,note:"Ad revenue"},{id:239,platform:"Merch",amount:980,month:11,year:2025,note:"Holiday drop"},{id:241,platform:"Patreon",amount:950,month:11,year:2025,note:"Members"},{id:242,platform:"Sponsorship",amount:4000,month:11,year:2025,note:"Holiday brand deal"},
   {id:301,platform:"YouTube",amount:980,month:0,year:2026,note:"Ad revenue"},{id:302,platform:"Patreon",amount:790,month:0,year:2026,note:"Members"},{id:303,platform:"Sponsorship",amount:1800,month:0,year:2026,note:"Brand deal"},
   {id:304,platform:"YouTube",amount:1240,month:1,year:2026,note:"Ad revenue"},{id:305,platform:"Patreon",amount:850,month:1,year:2026,note:"Members"},
   {id:306,platform:"Sponsorship",amount:2500,month:2,year:2026,note:"NordVPN deal"},{id:307,platform:"YouTube",amount:1240,month:2,year:2026,note:"Ad revenue"},{id:308,platform:"Patreon",amount:850,month:2,year:2026,note:"Members"},{id:309,platform:"Merch",amount:430,month:2,year:2026,note:"Spring drop"},{id:310,platform:"Affiliate",amount:310,month:2,year:2026,note:"Amazon links"},
@@ -250,6 +254,11 @@ function GlobalCSS({dark}){
     .si:focus  { border-color: ${t.acc} !important; }
     .bdr:hover { background: ${dark?"#16162a":"#eceae2"} !important; }
     select option { background: ${t.surf}; color: ${t.txt}; }
+    /* Mobile base */
+    @media (max-width: 768px) {
+      html { font-size: 15px; }
+      body { overflow-x: hidden; }
+    }
     .tax-ring  { transition: stroke-dasharray .9s cubic-bezier(.23,1,.32,1); }
     .pl-row:hover { background: ${dark?"#16162a":"#f0ece4"} !important; border-radius: 10px; }
     /* ── Card transitions ── */
@@ -340,6 +349,7 @@ function StatePicker({value,onChange,t}){
 // ─── DASHBOARD TAB ────────────────────────────────────────────────────────────
 function MonthlyDetailTab({entries,setEntries,dark,selMonth,setSelMonth,selYear,userProfile,addEntry,deleteEntry}){
   const t=T(dark);
+  const w=useW();
   const [animIn,setAnimIn]=useState(false);
   useEffect(()=>{setTimeout(()=>setAnimIn(true),60);},[]);
   const [showForm,setShowForm]=useState(false);
@@ -386,7 +396,7 @@ function MonthlyDetailTab({entries,setEntries,dark,selMonth,setSelMonth,selYear,
         <span style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",marginRight:"4px"}}>PERIOD</span>
         {MONTHS.map((m,i)=>(
           <button key={m} className="mb btn" onClick={()=>setSelMonth(i)} style={{
-            padding:"8px 14px",fontSize:"13px",fontWeight:600,
+            padding:w<600?"6px 9px":"8px 14px",fontSize:w<600?"11px":"13px",fontWeight:600,
             background:selMonth===i?t.acc:"transparent",
             color:selMonth===i?"#fff":t.mut,
             border:`1.5px solid ${selMonth===i?t.acc:t.brd}`,
@@ -455,7 +465,7 @@ function MonthlyDetailTab({entries,setEntries,dark,selMonth,setSelMonth,selYear,
       </div>
 
       {/* ── Supporting stats ── */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"14px",marginBottom:"20px"}}>
+      <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"repeat(3,1fr)",gap:"12px",marginBottom:"16px"}}>
         <StatCard
           label="Tax Set Aside"
           value={`$${Math.round(taxAside).toLocaleString()}`}
@@ -528,7 +538,7 @@ function MonthlyDetailTab({entries,setEntries,dark,selMonth,setSelMonth,selYear,
       </div>
 
       {/* Bottom grid */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"20px"}}>
+      <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"1fr 1fr",gap:"16px"}}>
         {/* Platform breakdown */}
         <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"24px",transitionDelay:"0.4s"}}>
           <div style={{fontSize:"12px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"18px"}}>Income by Platform</div>
@@ -561,7 +571,7 @@ function MonthlyDetailTab({entries,setEntries,dark,selMonth,setSelMonth,selYear,
           </div>
           {showForm&&(
             <div style={{background:t.inp,border:`1.5px solid ${t.brd}`,borderRadius:"12px",padding:"16px",marginBottom:"16px"}}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px",marginBottom:"10px"}}>
+              <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"1fr 1fr",gap:"10px",marginBottom:"10px"}}>
                 <div>
                   <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"6px"}}>PLATFORM</div>
                   <select value={form.platform} onChange={e=>setForm({...form,platform:e.target.value})} style={inp}>
@@ -618,6 +628,7 @@ function MonthlyDetailTab({entries,setEntries,dark,selMonth,setSelMonth,selYear,
 // ─── YEARLY TAB ───────────────────────────────────────────────────────────────
 function YearOverviewTab({entries,dark,userProfile}){
   const t=T(dark);
+  const w=useW();
   const availYears=[...new Set(entries.map(e=>e.year))].sort((a,b)=>b-a);
   const [yr,setYr]=useState(availYears[0]||2026);
   const [view,setView]=useState("bar");
@@ -700,11 +711,11 @@ function YearOverviewTab({entries,dark,userProfile}){
       <div className={`fi ${animIn?"on":""}`} style={{
         background:`linear-gradient(135deg,${t.acc}22,${t.acc}06)`,
         border:`1.5px solid ${t.acc}55`,
-        borderRadius:"20px",padding:"28px 36px",marginBottom:"16px",
+        borderRadius:"16px",padding:w<600?"18px 16px":"28px 36px",marginBottom:"16px",
         transitionDelay:"0.05s",position:"relative",overflow:"hidden",
       }}>
         <div style={{position:"absolute",top:"-50px",right:"-50px",width:"200px",height:"200px",borderRadius:"50%",background:t.acc,opacity:.06,pointerEvents:"none"}}/>
-        <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",flexWrap:"wrap",gap:"20px"}}>
+        <div style={{display:"flex",alignItems:w<600?"flex-start":"flex-end",justifyContent:"space-between",flexWrap:"wrap",gap:"16px",flexDirection:w<600?"column":"row"}}>
           <div>
             <div style={{fontSize:"12px",color:t.acc,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:"12px"}}>
               Total Earned — {yr}
@@ -735,7 +746,7 @@ function YearOverviewTab({entries,dark,userProfile}){
       </div>
 
       {/* ── Supporting stats ── */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"14px",marginBottom:"20px"}}>
+      <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"repeat(3,1fr)",gap:"12px",marginBottom:"16px"}}>
         <StatCard label="Best Month" value={MONTHS[bestMo.month]} sub={`$${bestMo.total.toLocaleString()} earned`} subColor={t.acc} delay="0.18s" t={t} animIn={animIn} icon="🏆" topColor="#ffd426"/>
         <StatCard
           label="Tax Set Aside"
@@ -873,7 +884,7 @@ function YearOverviewTab({entries,dark,userProfile}){
       </div>
 
       {/* Mini platform charts */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px"}}>
+      <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"1fr 1fr",gap:"14px"}}>
         {pRank.map((p,idx)=>(
           <div key={p.name} className={`fi card ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"20px",transitionDelay:`${.58+idx*.05}s`,position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,right:0,height:"3px",background:`linear-gradient(90deg,${p.color},${p.color}00)`}}/>
@@ -909,6 +920,7 @@ function YearOverviewTab({entries,dark,userProfile}){
 // ─── TAX TAB ──────────────────────────────────────────────────────────────────
 function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,expenseDedCount=0}){
   const t=T(dark);
+  const w=useW();
   const CY=2026;
   const yInc=entries.filter(e=>e.year===CY).reduce((s,e)=>s+e.amount,0);
   const [income,setIncome]=useState(String(Math.round(yInc))||"");
@@ -986,7 +998,7 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
           </button>
         </div>
         {editProf&&(
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px"}}>
+          <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"1fr 1fr",gap:"14px"}}>
             <div>
               <div style={{fontSize:"11px",color:t.mut,fontWeight:700,textTransform:"uppercase",marginBottom:"8px"}}>State</div>
               <StatePicker value={draftState} onChange={setDraftState} t={t}/>
@@ -1017,7 +1029,7 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
           <button className="btn" onClick={()=>setEditProf(true)} style={{background:t.acc,color:"#fff",padding:"14px 32px",fontSize:"15px",fontWeight:700,borderRadius:"12px"}}>Set Up Profile →</button>
         </div>
       ):!calc?(
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"20px"}}>
+        <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"1fr 1fr",gap:"16px"}}>
           <div style={{display:"flex",flexDirection:"column",gap:"18px"}}>
             <div>
               <div style={{fontSize:"11px",color:t.mut,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",marginBottom:"8px"}}>Annual Gross Income</div>
@@ -1079,7 +1091,7 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
             <button className="btn" onClick={()=>{setCalc(false);setAnimIn(false);setRes(null);}} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.txt,padding:"10px 20px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>← Recalculate</button>
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"14px",marginBottom:"20px"}}>
+          <div style={{display:"grid",gridTemplateColumns:w<600?"1fr 1fr":"repeat(4,1fr)",gap:"12px",marginBottom:"20px"}}>
             {[
               {label:"Total Tax Due",val:`$${Math.round(res.allTax).toLocaleString()}`,sub:`${res.eff.toFixed(1)}% effective rate`,c:t.dan,icon:"⚠️",top:t.dan},
               {label:"Take Home",val:`$${Math.round(res.home).toLocaleString()}`,sub:"After all taxes",c:t.acc,icon:"✅",top:t.acc},
@@ -1098,7 +1110,7 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
             ))}
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"220px 1fr",gap:"18px",marginBottom:"18px"}}>
+          <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"220px 1fr",gap:"16px",marginBottom:"16px"}}>
             {/* Donut */}
             <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"22px",transitionDelay:"0.3s"}}>
               <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"14px"}}>Breakdown</div>
@@ -1170,7 +1182,7 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
           {/* Quarterly */}
           <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"24px",marginBottom:"16px",transitionDelay:"0.5s"}}>
             <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"16px"}}>2025 Quarterly Payments</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px"}}>
+            <div style={{display:"grid",gridTemplateColumns:w<600?"1fr 1fr":"repeat(4,1fr)",gap:"10px"}}>
               {QDATES.map(q=>(
                 <div key={q.q} style={{background:t.inp,border:`1.5px solid ${t.brd}`,borderRadius:"12px",padding:"18px 14px",textAlign:"center"}}>
                   <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",marginBottom:"6px"}}>{q.q}</div>
@@ -1573,7 +1585,7 @@ function LandingPage({dark,onEnter,t}){
   return(
     <div style={{minHeight:"100vh",background:t.bg,color:t.txt}}>
       {/* Hero */}
-      <div style={{maxWidth:"960px",margin:"0 auto",padding:"110px 40px 90px",textAlign:"center"}}>
+      <div style={{maxWidth:"960px",margin:"0 auto",padding:w<600?"70px 20px 50px":"110px 40px 90px",textAlign:"center"}}>
         <div style={{display:"inline-flex",alignItems:"center",gap:"8px",background:`${t.acc}18`,border:`1.5px solid ${t.acc}44`,padding:"8px 18px",borderRadius:"100px",fontSize:"13px",fontWeight:700,color:t.acc,marginBottom:"28px"}}>
           ✦ Built for content creators
         </div>
@@ -1620,7 +1632,7 @@ function LandingPage({dark,onEnter,t}){
 
       {/* Stats bar */}
       <div style={{borderTop:`1.5px solid ${t.brd}`,borderBottom:`1.5px solid ${t.brd}`}}>
-        <div style={{maxWidth:"960px",margin:"0 auto",display:"grid",gridTemplateColumns:"repeat(3,1fr)"}}>
+        <div style={{maxWidth:"960px",margin:"0 auto",display:"grid",gridTemplateColumns:w<600?"1fr":"repeat(3,1fr)"}}>
           {[["$2.4M+","tracked by creators"],["12+","income sources supported"],["3 min","average setup time"]].map(([v,l],i)=>(
             <div key={i} style={{padding:"44px 32px",textAlign:"center",borderRight:i<2?`1.5px solid ${t.brd}`:"none"}}>
               <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"46px",fontWeight:800,color:t.acc,letterSpacing:"0px"}}>{v}</div>
@@ -1631,12 +1643,12 @@ function LandingPage({dark,onEnter,t}){
       </div>
 
       {/* Features */}
-      <div style={{maxWidth:"1000px",margin:"0 auto",padding:"90px 40px"}}>
+      <div style={{maxWidth:"1000px",margin:"0 auto",padding:w<600?"50px 20px":"90px 40px"}}>
         <div style={{textAlign:"center",marginBottom:"52px"}}>
           <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"2px",textTransform:"uppercase",marginBottom:"14px"}}>Everything You Need</div>
           <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"38px",fontWeight:800,color:t.txt,letterSpacing:"0px"}}>One app. Every income stream.</div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"18px"}}>
+        <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":w<900?"1fr 1fr":"repeat(3,1fr)",gap:"16px"}}>
           {features.map(f=>(
             <div key={f.title} className="card" style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"18px",padding:"28px 24px"}}>
               <div style={{width:"50px",height:"50px",borderRadius:"14px",background:`${t.acc}18`,border:`1.5px solid ${t.acc}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",marginBottom:"16px"}}>
@@ -1650,7 +1662,7 @@ function LandingPage({dark,onEnter,t}){
       </div>
 
       {/* CTA — uses t.ctaBg which is theme-aware */}
-      <div style={{background:t.ctaBg,padding:"88px 40px",textAlign:"center"}}>
+      <div style={{background:t.ctaBg,padding:w<600?"50px 20px":"88px 40px",textAlign:"center"}}>
         <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"42px",fontWeight:800,color:"#f2efe8",marginBottom:"16px",letterSpacing:"0px"}}>
           Start tracking today.
         </div>
@@ -1671,6 +1683,7 @@ function LandingPage({dark,onEnter,t}){
 // ─── EXPENSES & FEES TAB ──────────────────────────────────────────────────────
 function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpense:addExpenseProp,updateExpense:updateExpenseProp,deleteExpense:deleteExpenseProp}){
   const t=T(dark);
+  const w=useW();
 
   // ── State ──
   const [viewMonth,setViewMonth]=useState(selMonth);
@@ -1854,7 +1867,7 @@ function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpe
       <div className={`fi ${animIn?"on":""}`} style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"24px",flexWrap:"wrap"}}>
         <span style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px"}}>PERIOD</span>
         {MONTHS.map((m,i)=>(
-          <button key={m} className="mb btn" onClick={()=>setViewMonth(i)} style={{padding:"7px 13px",fontSize:"13px",fontWeight:600,background:viewMonth===i?t.acc:"transparent",color:viewMonth===i?"#fff":t.mut,border:`1.5px solid ${viewMonth===i?t.acc:t.brd}`,borderRadius:"8px"}}>
+          <button key={m} className="mb btn" onClick={()=>setViewMonth(i)} style={{padding:w<600?"6px 9px":"7px 13px",fontSize:w<600?"11px":"13px",fontWeight:600,background:viewMonth===i?t.acc:"transparent",color:viewMonth===i?"#fff":t.mut,border:`1.5px solid ${viewMonth===i?t.acc:t.brd}`,borderRadius:"8px"}}>
             {m}
           </button>
         ))}
@@ -1911,7 +1924,7 @@ function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpe
         )}
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px",marginBottom:"16px"}}>
+      <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"1fr 1fr",gap:"14px",marginBottom:"16px"}}>
         {/* Category breakdown */}
         <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"22px",transitionDelay:"0.15s"}}>
           <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"16px"}}>By Category</div>
@@ -1994,7 +2007,7 @@ function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpe
         {showAdd&&(
           <div style={{background:t.inp,border:`1.5px solid ${t.acc}55`,borderRadius:"14px",padding:"20px",marginBottom:"16px"}}>
             <div style={{fontSize:"12px",color:t.acc,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"14px"}}>New Transaction</div>
-            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:"10px",marginBottom:"12px"}}>
+            <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"2fr 1fr 1fr",gap:"10px",marginBottom:"12px"}}>
               <div>
                 <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"5px"}}>NAME</div>
                 <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="e.g. Adobe Premiere, Stripe fees…" style={inp}/>
@@ -2014,7 +2027,7 @@ function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpe
                 </div>
               </div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px",marginBottom:"12px"}}>
+            <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"1fr 1fr",gap:"10px",marginBottom:"12px"}}>
               <div>
                 <div style={{fontSize:"11px",color:t.mut,fontWeight:600,marginBottom:"5px"}}>CATEGORY</div>
                 <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})} style={inp}>
@@ -2125,7 +2138,7 @@ function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpe
                   {isEditing&&editForm&&(
                     <div style={{background:t.inp,border:`1.5px solid ${t.acc}55`,borderRadius:"14px",padding:"16px",marginBottom:"4px",marginTop:"2px"}}>
                       <div style={{fontSize:"11px",color:t.acc,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"12px"}}>Edit Transaction</div>
-                      <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:"8px",marginBottom:"10px"}}>
+                      <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"2fr 1fr 1fr",gap:"8px",marginBottom:"10px"}}>
                         <div>
                           <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"4px"}}>NAME</div>
                           <input value={editForm.name} onChange={e=>setEditForm({...editForm,name:e.target.value})} style={inp}/>
@@ -2145,7 +2158,7 @@ function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpe
                           </div>
                         </div>
                       </div>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginBottom:"10px"}}>
+                      <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"1fr 1fr",gap:"8px",marginBottom:"10px"}}>
                         <div>
                           <div style={{fontSize:"10px",color:t.mut,fontWeight:600,marginBottom:"4px"}}>CATEGORY</div>
                           <select value={editForm.category} onChange={e=>setEditForm({...editForm,category:e.target.value})} style={inp}>
@@ -2228,6 +2241,7 @@ export default function App(){
   const [dbError,setDbError]=useState(null);         // surface any load errors
 
   const t=T(dark);
+  const w=useW();
 
   // ── On mount: check if user is already logged in ──────────────────────────
   useEffect(()=>{
@@ -2473,7 +2487,7 @@ export default function App(){
       <GlobalCSS dark={dark}/>
 
       {/* Header */}
-      <div style={{borderBottom:`1px solid ${t.brd}`,padding:"14px 36px",display:"flex",alignItems:"center",justifyContent:"space-between",background:t.nav,position:"sticky",top:0,zIndex:50,backdropFilter:"blur(14px)"}}>
+      <div style={{borderBottom:`1px solid ${t.brd}`,padding:w<600?"10px 16px":"14px 36px",display:"flex",alignItems:"center",justifyContent:"space-between",background:t.nav,position:"sticky",top:0,zIndex:50,backdropFilter:"blur(14px)"}}>
         <div style={{display:"flex",alignItems:"center",gap:"10px",cursor:"pointer"}} onClick={()=>setPage("landing")}>
           <div style={{width:"38px",height:"38px",borderRadius:"11px",background:`linear-gradient(135deg,${t.acc},#7b8cff)`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="38" height="38" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="12" fill="url(#cfgradapp)"/><defs><linearGradient id="cfgradapp" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#00D4A0"/><stop offset="100%" stopColor="#5B6BFF"/></linearGradient></defs><rect x="9" y="28" width="6" height="8" rx="2" fill="white" fillOpacity="0.55"/><rect x="19" y="21" width="6" height="15" rx="2" fill="white" fillOpacity="0.8"/><rect x="29" y="13" width="6" height="23" rx="2" fill="white"/><path d="M32 10 L32 6" stroke="white" strokeWidth="2" strokeLinecap="round"/><path d="M30 8 L32 6 L34 8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></div>
           <div>
@@ -2488,14 +2502,14 @@ export default function App(){
                 {userProfile.name[0]?.toUpperCase()}
               </div>
               <span style={{fontSize:"14px",fontWeight:600,color:t.txt}}>{userProfile.name}</span>
-              {userProfile.state&&<span style={{fontSize:"12px",color:t.mut}}>· {userProfile.state}</span>}
+              {userProfile.state&&w>=600&&<span style={{fontSize:"12px",color:t.mut}}>· {userProfile.state}</span>}
             </div>
           )}
           <div style={{display:"flex",alignItems:"center",gap:"6px",background:t.inp,padding:"6px 12px",borderRadius:"8px",border:`1px solid ${t.brd}`}}>
             <div className="ld" style={{width:"7px",height:"7px",borderRadius:"50%",background:t.acc}}/>
             <span style={{fontSize:"12px",color:t.mut,fontWeight:600}}>{authUser?"Synced":"Guest"}</span>
           </div>
-          <button className="btn" onClick={()=>exportCSV(entries,null)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>↓ Export</button>
+          {w>=600&&<button className="btn" onClick={()=>exportCSV(entries,null)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>↓ Export</button>}
           <button className="btn" onClick={()=>setDark(d=>!d)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>{dark?"☀ Light":"◑ Dark"}</button>
           {authUser
             ?<button className="btn" onClick={handleLogout} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"9px 18px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>Log Out</button>
@@ -2505,12 +2519,12 @@ export default function App(){
       </div>
 
       {/* Nav */}
-      <div style={{borderBottom:`1px solid ${t.brd}`,padding:"0 36px",display:"flex",background:t.nav}}>
+      <div style={{borderBottom:`1px solid ${t.brd}`,padding:w<600?"0 8px":"0 36px",display:"flex",background:t.nav,overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
         {TABS.map(tb=>{
           const isImp=tb.id==="import"&&importCount>0, isAct=tab===tb.id;
           return(
             <button key={tb.id} className="nb" onClick={()=>setTab(tb.id)} style={{
-              padding:"16px 22px",fontSize:"14px",
+              padding:w<600?"12px 14px":"16px 22px",fontSize:w<600?"12px":"14px",whiteSpace:"nowrap",
               fontWeight:isAct?700:500,
               color:isImp?(isAct?t.acc:`${t.acc}88`):(isAct?t.txt:t.mut),
               borderBottom:`3px solid ${isAct?t.acc:"transparent"}`,
@@ -2524,7 +2538,7 @@ export default function App(){
 
       {/* Guest banner */}
       {!authUser&&(
-        <div style={{background:`linear-gradient(90deg,#7b8cff22,#00d4a022)`,borderBottom:`1px solid #7b8cff44`,padding:"10px 36px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px"}}>
+        <div style={{background:`linear-gradient(90deg,#7b8cff22,#00d4a022)`,borderBottom:`1px solid #7b8cff44`,padding:w<600?"10px 14px":"10px 36px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px"}}>
           <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
             <span style={{fontSize:"16px"}}>👋</span>
             <span style={{fontSize:"13px",color:t.txt,fontWeight:500}}>You're in guest mode — <strong>data won't be saved</strong> when you close the tab.</span>
@@ -2534,7 +2548,7 @@ export default function App(){
       )}
 
       {/* Content */}
-      <div style={{padding:"36px 40px",maxWidth:"1200px",margin:"0 auto"}}>
+      <div style={{padding:w<600?"16px 14px":"36px 40px",maxWidth:"1200px",margin:"0 auto"}}>
         {tab==="overview" &&<YearOverviewTab entries={entries} dark={dark} userProfile={userProfile}/>}
         {tab==="monthly"  &&<MonthlyDetailTab entries={entries} setEntries={setEntries} dark={dark} selMonth={selMonth} setSelMonth={setSelMonth} selYear={SEL_YEAR} userProfile={userProfile} addEntry={addEntry} deleteEntry={deleteEntry}/>}
         {tab==="expenses" &&<ExpensesTab entries={entries} dark={dark} selMonth={selMonth} selYear={SEL_YEAR} expenses={expenses} setExpenses={setExpenses} addExpense={addExpense} updateExpense={updateExpense} deleteExpense={deleteExpense}/>}
