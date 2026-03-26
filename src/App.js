@@ -923,24 +923,37 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
   const w=useW();
   const CY=2026;
   const yInc=entries.filter(e=>e.year===CY).reduce((s,e)=>s+e.amount,0);
+
+  // ── All state ─────────────────────────────────────────────────────────────
   const [income,setIncome]=useState(String(Math.round(yInc))||"");
   const [ded,setDed]=useState("");
-  const [calc,setCalc]=useState(false);
-  const [res,setRes]=useState(null);
   const [animIn,setAnimIn]=useState(false);
   const [editProf,setEditProf]=useState(false);
   const [draftState,setDraftState]=useState(userProfile.state);
   const [draftFiling,setDraftFiling]=useState(userProfile.filingStatus);
+
+  // Auto-fill income from tracked entries
   useEffect(()=>{if(yInc>0)setIncome(String(Math.round(yInc)));},[yInc]);
+  // Auto-fill deductions from expenses
+  useEffect(()=>{if(expenseDeductions>0)setDed(String(expenseDeductions));},[expenseDeductions]);
+  // Animate in when profile is set
+  useEffect(()=>{if(userProfile.state)setTimeout(()=>setAnimIn(true),100);},[userProfile.state]);
 
-  function doCalc(){
-    const g=parseFloat(income.replace(/,/g,""))||0;
-    if(!g||!userProfile.state)return;
-    const r=calcTaxes({gross:g,status:userProfile.filingStatus,state:userProfile.state,ded:parseFloat(ded)||0});
-    setRes({...r,gross:g}); setCalc(true); setTimeout(()=>setAnimIn(true),150);
+  function saveProf(){
+    onUpdateProfile({state:draftState,filingStatus:draftFiling});
+    setEditProf(false);
+    setAnimIn(false);
+    setTimeout(()=>setAnimIn(true),100);
   }
-  function saveProf(){onUpdateProfile({state:draftState,filingStatus:draftFiling});setEditProf(false);setCalc(false);setAnimIn(false);setRes(null);}
 
+  // ── Live calculation — runs on every keystroke ────────────────────────────
+  const g=parseFloat(String(income).replace(/,/g,""))||0;
+  const d=parseFloat(ded)||0;
+  const res=(g>0&&userProfile.state)
+    ?calcTaxes({gross:g,status:userProfile.filingStatus,state:userProfile.state,ded:d})
+    :null;
+
+  // ── Donut ─────────────────────────────────────────────────────────────────
   const donutR=78, donutC=2*Math.PI*donutR;
   const segs=res?[
     {label:"Federal Tax",  val:res.fed,   color:t.dan},
@@ -948,35 +961,29 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
     {label:"State Tax",    val:res.stTax, color:"#a259ff"},
     {label:"Take Home",    val:res.home,  color:t.acc},
   ]:[];
-  // Foolproof donut segments:
-  // strokeDasharray = "segLen gap" where gap = fullCircle - segLen (only shows own arc)
-  // strokeDashoffset = fullCircle - startPosition (rotates arc to correct position)
-  // Draw in document order; SVG paints last element on top.
-  // We reverse so taxes (small) render on top of take-home (large green).
   let cumLen=0;
   const dSegs=segs.map(s=>{
     const frac=res&&res.gross>0?Math.max(0,s.val/res.gross):0;
     const segLen=frac*donutC;
     const startPos=cumLen;
     cumLen+=segLen;
-    // dashOffset: fullCircle - startPos puts the dash beginning at the right angle
     return{...s,frac,segLen,dashOffset:donutC-startPos};
   });
 
   const inp={background:t.inp,border:`1.5px solid ${t.brd}`,color:t.txt,padding:"12px 16px",fontSize:"14px",borderRadius:"10px",fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif",width:"100%"};
 
   return(
-    <div style={{maxWidth:"920px"}}>
-      <div style={{marginBottom:"26px"}}>
+    <div style={{maxWidth:"960px"}}>
+      <div style={{marginBottom:"24px"}}>
         <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"34px",fontWeight:800,color:t.txt,marginBottom:"8px"}}>Tax Estimator</div>
-        <p style={{fontSize:"15px",color:t.mut,lineHeight:1.7}}>Real self-employment tax — federal income tax, self-employment tax, and state tax, all calculated for your exact situation.</p>
+        <p style={{fontSize:"15px",color:t.mut,lineHeight:1.7}}>Real self-employment tax — updates live as you type. Federal, state, and SE tax calculated for your exact situation.</p>
         <div style={{marginTop:"12px",padding:"12px 16px",background:t.warnBg,border:`1.5px solid ${t.wrn}44`,borderRadius:"10px",fontSize:"13px",color:t.wrn,lineHeight:1.6,fontWeight:500}}>
           ⚠ Estimate for planning only — not professional tax advice. Consult a CPA for your actual filing.
         </div>
       </div>
 
       {/* Profile card */}
-      <div style={{background:t.crd,border:`1.5px solid ${editProf?t.acc:t.cbrd}`,borderRadius:"16px",padding:"20px 24px",marginBottom:"22px",transition:"border-color .2s"}}>
+      <div style={{background:t.crd,border:`1.5px solid ${editProf?t.acc:t.cbrd}`,borderRadius:"16px",padding:"20px 24px",marginBottom:"20px",transition:"border-color .2s"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:editProf?"18px":"0"}}>
           <div style={{display:"flex",alignItems:"center",gap:"14px"}}>
             <div style={{width:"46px",height:"46px",borderRadius:"12px",background:`linear-gradient(135deg,${t.acc},#7b8cff)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px",flexShrink:0}}>📍</div>
@@ -998,7 +1005,7 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
           </button>
         </div>
         {editProf&&(
-          <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"1fr 1fr",gap:"14px"}}>
+          <div style={{display:"grid",gridTemplateColumns:w<600?"1fr":"1fr 1fr",gap:"16px"}}>
             <div>
               <div style={{fontSize:"11px",color:t.mut,fontWeight:700,textTransform:"uppercase",marginBottom:"8px"}}>State</div>
               <StatePicker value={draftState} onChange={setDraftState} t={t}/>
@@ -1025,182 +1032,186 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
         <div style={{textAlign:"center",padding:"60px 32px",background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px"}}>
           <div style={{fontSize:"52px",marginBottom:"16px"}}>📍</div>
           <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"22px",fontWeight:800,color:t.txt,marginBottom:"10px"}}>Set up your tax profile first</div>
-          <p style={{fontSize:"15px",color:t.mut,marginBottom:"24px",maxWidth:"400px",margin:"0 auto 24px"}}>Click "Edit Profile" above to add your state and filing status — you only need to do this once.</p>
+          <p style={{fontSize:"15px",color:t.mut,marginBottom:"24px",maxWidth:"400px",margin:"0 auto 24px"}}>Click "Edit Profile" above to add your state and filing status.</p>
           <button className="btn" onClick={()=>setEditProf(true)} style={{background:t.acc,color:"#fff",padding:"14px 32px",fontSize:"15px",fontWeight:700,borderRadius:"12px"}}>Set Up Profile →</button>
-        </div>
-      ):!calc?(
-        <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"1fr 1fr",gap:"16px"}}>
-          <div style={{display:"flex",flexDirection:"column",gap:"18px"}}>
-            <div>
-              <div style={{fontSize:"11px",color:t.mut,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",marginBottom:"8px"}}>Annual Gross Income</div>
-              <div style={{position:"relative"}}>
-                <span style={{position:"absolute",left:"16px",top:"50%",transform:"translateY(-50%)",color:t.mut,fontSize:"20px",fontWeight:700}}>$</span>
-                <input value={income} onChange={e=>setIncome(e.target.value)} placeholder="0" type="number" style={{...inp,paddingLeft:"38px",fontSize:"20px",fontWeight:700}}/>
-              </div>
-              {yInc>0&&<div style={{marginTop:"8px",fontSize:"13px",color:t.acc,fontWeight:600,cursor:"pointer"}} onClick={()=>setIncome(String(Math.round(yInc)))}>↑ Auto-fill from tracked {CY} income: ${Math.round(yInc).toLocaleString()}</div>}
-            </div>
-            <div>
-              <div style={{fontSize:"11px",color:t.mut,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",marginBottom:"8px"}}>Business Deductions <span style={{color:t.fnt,fontWeight:400,fontSize:"10px"}}>(optional)</span></div>
-              {expenseDeductions>0&&(
-                <div style={{marginBottom:"8px",padding:"10px 14px",background:`${t.acc}14`,border:`1.5px solid ${t.acc}44`,borderRadius:"10px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}} onClick={()=>setDed(String(expenseDeductions))}>
-                  <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                    <span style={{fontSize:"16px"}}>🧾</span>
-                    <div>
-                      <div style={{fontSize:"13px",fontWeight:700,color:t.txt}}>Auto-fill from marked expenses</div>
-                      <div style={{fontSize:"11px",color:t.mut}}>{expenseDedCount} deductible item{expenseDedCount!==1?"s":""} in Expenses & Fees</div>
-                    </div>
-                  </div>
-                  <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"20px",fontWeight:800,color:t.acc}}>${expenseDeductions.toLocaleString()}</div>
-                </div>
-              )}
-              <div style={{position:"relative"}}>
-                <span style={{position:"absolute",left:"16px",top:"50%",transform:"translateY(-50%)",color:t.mut,fontSize:"20px",fontWeight:700}}>$</span>
-                <input value={ded} onChange={e=>setDed(e.target.value)} placeholder="Equipment, software, home office…" type="number" style={{...inp,paddingLeft:"38px"}}/>
-              </div>
-              {expenseDeductions>0&&parseFloat(ded)!==expenseDeductions&&(
-                <div style={{marginTop:"6px",fontSize:"12px",color:t.acc,cursor:"pointer",fontWeight:600}} onClick={()=>setDed(String(expenseDeductions))}>↑ Click above to use ${expenseDeductions.toLocaleString()} from your marked deductible expenses</div>
-              )}
-              {!(expenseDeductions>0)&&<div style={{marginTop:"6px",fontSize:"12px",color:t.mut}}>Or mark expenses as deductible in the Expenses & Fees tab to auto-fill this field</div>}
-            </div>
-          </div>
-          <div style={{background:t.inp,border:`1.5px solid ${t.brd}`,borderRadius:"14px",padding:"20px"}}>
-            <div style={{fontSize:"11px",color:t.mut,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",marginBottom:"16px"}}>What's Calculated</div>
-            {[["Federal Income Tax","2024 brackets, standard deduction applied"],["Self-Employment Tax","15.3% SS + Medicare on 92.35% of income"],[`${userProfile.state} State Tax`,`${STATE_TAXES[userProfile.state]}% effective rate`],["SE Tax Deduction","Half of SE tax deducted from federal income"]].map(([title,desc])=>(
-              <div key={title} style={{display:"flex",gap:"10px",marginBottom:"16px"}}>
-                <div style={{width:"24px",height:"24px",borderRadius:"7px",background:`${t.acc}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",flexShrink:0,color:t.acc,fontWeight:700}}>✓</div>
-                <div>
-                  <div style={{fontSize:"14px",fontWeight:600,color:t.txt,marginBottom:"2px"}}>{title}</div>
-                  <div style={{fontSize:"12px",color:t.mut,lineHeight:1.5}}>{desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{gridColumn:"1/-1"}}>
-            <button className="btn" onClick={doCalc} disabled={!income||!userProfile.state} style={{background:(income&&userProfile.state)?`linear-gradient(135deg,${t.acc},#00a87a)`:"#444",color:"#fff",padding:"16px 40px",fontSize:"16px",fontWeight:700,borderRadius:"12px",width:"100%",boxShadow:(income&&userProfile.state)?`0 8px 24px ${t.glo}`:"none"}}>
-              {userProfile.state?"Calculate My Taxes →":"Set Your State First →"}
-            </button>
-          </div>
         </div>
       ):(
         <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px",flexWrap:"wrap",gap:"12px"}}>
-            <div>
-              <div style={{fontSize:"11px",color:t.mut,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px"}}>Estimate for {FILING[userProfile.filingStatus]} — {userProfile.state}</div>
-              <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"20px",fontWeight:800,color:t.txt}}>Based on ${parseFloat(income).toLocaleString()} gross income</div>
-            </div>
-            <button className="btn" onClick={()=>{setCalc(false);setAnimIn(false);setRes(null);}} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.txt,padding:"10px 20px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>← Recalculate</button>
-          </div>
-
-          <div style={{display:"grid",gridTemplateColumns:w<600?"1fr 1fr":"repeat(4,1fr)",gap:"12px",marginBottom:"20px"}}>
-            {[
-              {label:"Total Tax Due",val:`$${Math.round(res.allTax).toLocaleString()}`,sub:`${res.eff.toFixed(1)}% effective rate`,c:t.dan,icon:"⚠️",top:t.dan},
-              {label:"Take Home",val:`$${Math.round(res.home).toLocaleString()}`,sub:"After all taxes",c:t.acc,icon:"✅",top:t.acc},
-              {label:"Set Aside Now",val:`$${Math.round(res.allTax).toLocaleString()}`,sub:"Recommended reserve",c:t.wrn,icon:"🏦",top:t.wrn},
-              {label:"Per Quarter",val:`$${Math.round(res.qtr).toLocaleString()}`,sub:"Estimated payment",c:"#a259ff",icon:"📅",top:"#a259ff"},
-            ].map((s,i)=>(
-              <div key={s.label} className={`fi card ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"20px",transitionDelay:`${i*.07}s`,position:"relative",overflow:"hidden"}}>
-                <div style={{position:"absolute",top:0,left:0,right:0,height:"3px",background:`linear-gradient(90deg,${s.top},${s.top}00)`}}/>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}>
-                  <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase"}}>{s.label}</div>
-                  <span style={{fontSize:"18px"}}>{s.icon}</span>
-                </div>
-                <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"26px",fontWeight:800,color:s.c,marginBottom:"6px"}}>{s.val}</div>
-                <div style={{fontSize:"12px",color:t.mut,fontWeight:500}}>{s.sub}</div>
+          {/* ── Input row ── */}
+          <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"1fr 1fr",gap:"16px",marginBottom:"20px"}}>
+            {/* Income input */}
+            <div style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"20px 24px"}}>
+              <div style={{fontSize:"11px",color:t.mut,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",marginBottom:"10px"}}>Annual Gross Income</div>
+              <div style={{position:"relative"}}>
+                <span style={{position:"absolute",left:"16px",top:"50%",transform:"translateY(-50%)",color:t.mut,fontSize:"22px",fontWeight:700}}>$</span>
+                <input value={income} onChange={e=>setIncome(e.target.value)} placeholder="0" type="number"
+                  style={{...inp,paddingLeft:"40px",fontSize:"22px",fontWeight:800,border:`1.5px solid ${t.acc}55`}}/>
               </div>
-            ))}
+              {yInc>0&&(
+                <div style={{marginTop:"10px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <span style={{fontSize:"12px",color:t.mut}}>Tracked {CY} income</span>
+                  <button className="btn" onClick={()=>setIncome(String(Math.round(yInc)))} style={{fontSize:"12px",fontWeight:700,color:t.acc,background:`${t.acc}14`,border:`1px solid ${t.acc}44`,padding:"4px 12px",borderRadius:"6px"}}>
+                    Use ${Math.round(yInc).toLocaleString()} ↑
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Deductions input */}
+            <div style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"20px 24px"}}>
+              <div style={{fontSize:"11px",color:t.mut,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",marginBottom:"10px"}}>
+                Business Deductions <span style={{color:t.fnt,fontWeight:400,fontSize:"10px"}}>(optional)</span>
+              </div>
+              {expenseDeductions>0&&(
+                <div style={{marginBottom:"10px",padding:"10px 14px",background:`${t.acc}14`,border:`1.5px solid ${t.acc}44`,borderRadius:"10px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}} onClick={()=>setDed(String(expenseDeductions))}>
+                  <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                    <span style={{fontSize:"15px"}}>🧾</span>
+                    <div>
+                      <div style={{fontSize:"12px",fontWeight:700,color:t.txt}}>From Expenses & Fees</div>
+                      <div style={{fontSize:"11px",color:t.mut}}>{expenseDedCount} deductible item{expenseDedCount!==1?"s":""}</div>
+                    </div>
+                  </div>
+                  <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"18px",fontWeight:800,color:t.acc}}>${expenseDeductions.toLocaleString()}</div>
+                </div>
+              )}
+              <div style={{position:"relative"}}>
+                <span style={{position:"absolute",left:"16px",top:"50%",transform:"translateY(-50%)",color:t.mut,fontSize:"22px",fontWeight:700}}>$</span>
+                <input value={ded} onChange={e=>setDed(e.target.value)} placeholder="0" type="number"
+                  style={{...inp,paddingLeft:"40px",fontSize:"22px",fontWeight:800}}/>
+              </div>
+              <div style={{marginTop:"8px",fontSize:"12px",color:t.mut}}>Equipment, software, home office, internet…</div>
+            </div>
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"220px 1fr",gap:"16px",marginBottom:"16px"}}>
-            {/* Donut */}
-            <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"22px",transitionDelay:"0.3s"}}>
-              <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"14px"}}>Breakdown</div>
-              <svg width="176" height="176" viewBox="0 0 176 176" style={{display:"block",margin:"0 auto"}}>
-                <circle cx="88" cy="88" r={donutR} fill="none" stroke={t.fnt} strokeWidth="22"/>
-                {[...dSegs].reverse().map((s,ri)=>{
-                  const i=dSegs.length-1-ri; // original index for delay
-                  const visibleLen=animIn?s.segLen:0;
-                  const gap=donutC-visibleLen; // gap fills the rest so only this arc shows
-                  return(
-                    <circle key={s.label} cx="88" cy="88" r={donutR} fill="none"
-                      stroke={s.color} strokeWidth="22"
-                      strokeDasharray={`${visibleLen} ${gap}`}
-                      strokeDashoffset={s.dashOffset}
-                      style={{
-                        transform:"rotate(-90deg)",
-                        transformOrigin:"88px 88px",
-                        transition:`stroke-dasharray 0.75s cubic-bezier(.23,1,.32,1) ${.3+i*.18}s`,
-                      }}/>
-                  );
-                })}
-                <text x="88" y="82" textAnchor="middle" style={{fontFamily:"'Outfit',sans-serif",fontSize:"24px",fontWeight:800,fill:t.txt}}>{res.eff.toFixed(0)}%</text>
-                <text x="88" y="100" textAnchor="middle" style={{fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:"11px",fill:t.mut}}>effective</text>
-              </svg>
-              <div style={{marginTop:"14px"}}>
-                {dSegs.map(s=>(
-                  <div key={s.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${t.fnt}`}}>
-                    <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                      <div style={{width:"10px",height:"10px",borderRadius:"3px",background:s.color,flexShrink:0}}/>
-                      <span style={{fontSize:"12px",color:t.mut,fontWeight:500}}>{s.label}</span>
+          {/* ── Live results ── */}
+          {!res&&(
+            <div style={{textAlign:"center",padding:"40px",background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",color:t.mut}}>
+              <div style={{fontSize:"32px",marginBottom:"12px"}}>🧮</div>
+              <div style={{fontSize:"16px",fontWeight:600,color:t.txt,marginBottom:"6px"}}>Enter your income above</div>
+              <div style={{fontSize:"14px"}}>Results update live as you type — no button needed</div>
+            </div>
+          )}
+
+          {res&&(
+            <>
+              {/* Summary label */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px",flexWrap:"wrap",gap:"8px"}}>
+                <div style={{fontSize:"13px",color:t.mut,fontWeight:500}}>
+                  Live estimate for <strong style={{color:t.txt}}>{FILING[userProfile.filingStatus]}</strong> in <strong style={{color:t.txt}}>{userProfile.state}</strong>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:"6px",background:`${t.acc}14`,border:`1px solid ${t.acc}44`,padding:"4px 12px",borderRadius:"6px"}}>
+                  <div className="ld" style={{width:"6px",height:"6px",borderRadius:"50%",background:t.acc}}/>
+                  <span style={{fontSize:"12px",color:t.acc,fontWeight:700}}>Live</span>
+                </div>
+              </div>
+
+              {/* 4 result cards */}
+              <div style={{display:"grid",gridTemplateColumns:w<600?"1fr 1fr":"repeat(4,1fr)",gap:"12px",marginBottom:"20px"}}>
+                {[
+                  {label:"Total Tax Due",   val:`$${Math.round(res.allTax).toLocaleString()}`, sub:`${res.eff.toFixed(1)}% effective rate`, c:t.dan,  icon:"⚠️", top:t.dan},
+                  {label:"Take Home",       val:`$${Math.round(res.home).toLocaleString()}`,   sub:"After all taxes",                       c:t.acc,  icon:"✅", top:t.acc},
+                  {label:"Set Aside Now",   val:`$${Math.round(res.allTax).toLocaleString()}`, sub:"Recommended reserve",                   c:t.wrn,  icon:"🏦", top:t.wrn},
+                  {label:"Per Quarter",     val:`$${Math.round(res.qtr).toLocaleString()}`,    sub:"Estimated payment",                     c:"#a259ff",icon:"📅",top:"#a259ff"},
+                ].map((s,i)=>(
+                  <div key={s.label} className={`fi card ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"18px",transitionDelay:`${i*.07}s`,position:"relative",overflow:"hidden"}}>
+                    <div style={{position:"absolute",top:0,left:0,right:0,height:"3px",background:`linear-gradient(90deg,${s.top},${s.top}00)`}}/>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
+                      <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase"}}>{s.label}</div>
+                      <span style={{fontSize:"16px"}}>{s.icon}</span>
                     </div>
-                    <span style={{fontSize:"14px",fontWeight:700,color:s.color}}>${Math.round(s.val).toLocaleString()}</span>
+                    <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"24px",fontWeight:800,color:s.c,marginBottom:"4px"}}>{s.val}</div>
+                    <div style={{fontSize:"12px",color:t.mut,fontWeight:500}}>{s.sub}</div>
                   </div>
                 ))}
               </div>
-            </div>
-            {/* Breakdown table */}
-            <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"22px",transitionDelay:"0.35s"}}>
-              <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"14px"}}>Detailed Calculation</div>
-              {[
-                {label:"Gross Income",         val:res.gross,                  style:"normal", indent:0},
-                {label:"Standard Deduction",   val:-res.std,                   style:"deduct", indent:1},
-                {label:"½ SE Tax Deduction",   val:-res.seDed,                 style:"deduct", indent:1},
-                {label:`Extra Deductions${parseFloat(ded)>0&&parseFloat(ded)===expenseDeductions?" (from Expenses tab)":""}`,val:-(parseFloat(ded)||0),style:"deduct",indent:1},
-                {label:"Federal Taxable",      val:res.fedInc,                 style:"sub",    indent:0},
-                {label:"Federal Income Tax",   val:res.fed,                    style:"tax",    indent:1},
-                {label:"Self-Employment (15.3%)",val:res.se,                   style:"tax",    indent:1},
-                {label:`${userProfile.state} State (${STATE_TAXES[userProfile.state]}%)`,val:res.stTax,style:"tax",indent:1},
-                {label:"TOTAL TAX",            val:res.allTax,                 style:"grand",  indent:0},
-                {label:"TAKE HOME",            val:res.home,                   style:"home",   indent:0},
-              ].filter(r=>r.style!=="deduct"||Math.abs(r.val)>0).map(row=>(
-                <div key={row.label} className="bdr" style={{
-                  display:"flex",justifyContent:"space-between",alignItems:"center",
-                  padding:"9px 12px",marginLeft:`${row.indent*16}px`,borderRadius:"8px",
-                  background:row.style==="grand"?t.grandBg:row.style==="home"?t.homeBg:"transparent",
-                  marginBottom:"2px",
-                }}>
-                  <span style={{fontSize:"14px",fontWeight:row.style==="grand"||row.style==="home"?700:500,color:row.style==="grand"?t.dan:row.style==="home"?t.acc:row.style==="sub"?t.txt:t.mut}}>
-                    {row.indent>0?"  · ":""}{row.label}
-                  </span>
-                  <span style={{fontSize:"15px",fontWeight:700,color:row.style==="home"?t.acc:row.style==="grand"?t.dan:row.val<0?t.acc:t.txt}}>
-                    {row.val<0?`-$${Math.round(Math.abs(row.val)).toLocaleString()}`:`$${Math.round(row.val).toLocaleString()}`}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Quarterly */}
-          <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"24px",marginBottom:"16px",transitionDelay:"0.5s"}}>
-            <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"16px"}}>2025 Quarterly Payments</div>
-            <div style={{display:"grid",gridTemplateColumns:w<600?"1fr 1fr":"repeat(4,1fr)",gap:"10px"}}>
-              {QDATES.map(q=>(
-                <div key={q.q} style={{background:t.inp,border:`1.5px solid ${t.brd}`,borderRadius:"12px",padding:"18px 14px",textAlign:"center"}}>
-                  <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",marginBottom:"6px"}}>{q.q}</div>
-                  <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"22px",fontWeight:800,color:"#a259ff",marginBottom:"8px"}}>${Math.round(res.qtr).toLocaleString()}</div>
-                  <div style={{fontSize:"13px",fontWeight:600,color:t.txt,marginBottom:"3px"}}>Due {q.due}</div>
-                  <div style={{fontSize:"12px",color:t.mut}}>{q.period}</div>
+              {/* Donut + breakdown */}
+              <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"220px 1fr",gap:"16px",marginBottom:"16px"}}>
+                {/* Donut */}
+                <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"22px",transitionDelay:"0.3s"}}>
+                  <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"14px"}}>Breakdown</div>
+                  <svg width="176" height="176" viewBox="0 0 176 176" style={{display:"block",margin:"0 auto"}}>
+                    <circle cx="88" cy="88" r={donutR} fill="none" stroke={t.fnt} strokeWidth="22"/>
+                    {[...dSegs].reverse().map((s,ri)=>{
+                      const i=dSegs.length-1-ri;
+                      const visibleLen=animIn?s.segLen:0;
+                      const gap=donutC-visibleLen;
+                      return(
+                        <circle key={s.label} cx="88" cy="88" r={donutR} fill="none"
+                          stroke={s.color} strokeWidth="22"
+                          strokeDasharray={`${visibleLen} ${gap}`}
+                          strokeDashoffset={s.dashOffset}
+                          style={{transform:"rotate(-90deg)",transformOrigin:"88px 88px",transition:`stroke-dasharray 0.75s cubic-bezier(.23,1,.32,1) ${.3+i*.18}s`}}/>
+                      );
+                    })}
+                    <text x="88" y="82" textAnchor="middle" style={{fontFamily:"'Outfit',sans-serif",fontSize:"24px",fontWeight:800,fill:t.txt}}>{res.eff.toFixed(0)}%</text>
+                    <text x="88" y="100" textAnchor="middle" style={{fontFamily:"'Plus Jakarta Sans',sans-serif",fontSize:"11px",fill:t.mut}}>effective</text>
+                  </svg>
+                  <div style={{marginTop:"14px"}}>
+                    {dSegs.map(s=>(
+                      <div key={s.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${t.fnt}`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                          <div style={{width:"10px",height:"10px",borderRadius:"3px",background:s.color,flexShrink:0}}/>
+                          <span style={{fontSize:"12px",color:t.mut,fontWeight:500}}>{s.label}</span>
+                        </div>
+                        <span style={{fontSize:"14px",fontWeight:700,color:s.color}}>${Math.round(s.val).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
-            <div style={{marginTop:"14px",padding:"12px 16px",background:t.inp,border:`1.5px solid ${t.brd}`,borderRadius:"10px",fontSize:"13px",color:t.mut,lineHeight:1.7}}>
-              💡 <strong style={{color:t.txt}}>Pro tip:</strong> Pay via IRS Direct Pay or EFTPS to avoid underpayment penalties.
-            </div>
-          </div>
+
+                {/* Detailed breakdown */}
+                <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"22px",transitionDelay:"0.35s"}}>
+                  <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"14px"}}>Detailed Calculation</div>
+                  {[
+                    {label:"Gross Income",                                           val:res.gross,   style:"normal",indent:0},
+                    {label:"Standard Deduction",                                     val:-res.std,    style:"deduct",indent:1},
+                    {label:"½ SE Tax Deduction",                                     val:-res.seDed,  style:"deduct",indent:1},
+                    {label:`Extra Deductions${d>0&&d===expenseDeductions?" (from Expenses tab)":""}`,val:-d,style:"deduct",indent:1},
+                    {label:"Federal Taxable",                                         val:res.fedInc,  style:"sub",   indent:0},
+                    {label:"Federal Income Tax",                                      val:res.fed,     style:"tax",   indent:1},
+                    {label:"Self-Employment (15.3%)",                                 val:res.se,      style:"tax",   indent:1},
+                    {label:`${userProfile.state} State (${STATE_TAXES[userProfile.state]}%)`,val:res.stTax,style:"tax",indent:1},
+                    {label:"TOTAL TAX",                                               val:res.allTax,  style:"grand", indent:0},
+                    {label:"TAKE HOME",                                               val:res.home,    style:"home",  indent:0},
+                  ].filter(r=>r.style!=="deduct"||Math.abs(r.val)>0).map(row=>(
+                    <div key={row.label} className="bdr" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 12px",marginLeft:`${row.indent*16}px`,borderRadius:"8px",background:row.style==="grand"?t.grandBg:row.style==="home"?t.homeBg:"transparent",marginBottom:"2px"}}>
+                      <span style={{fontSize:"14px",fontWeight:row.style==="grand"||row.style==="home"?700:500,color:row.style==="grand"?t.dan:row.style==="home"?t.acc:row.style==="sub"?t.txt:t.mut}}>
+                        {row.indent>0?"  · ":""}{row.label}
+                      </span>
+                      <span style={{fontSize:"15px",fontWeight:700,color:row.style==="home"?t.acc:row.style==="grand"?t.dan:row.val<0?t.acc:t.txt}}>
+                        {row.val<0?`-$${Math.round(Math.abs(row.val)).toLocaleString()}`:`$${Math.round(row.val).toLocaleString()}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quarterly payments */}
+              <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"22px",marginBottom:"16px",transitionDelay:"0.5s"}}>
+                <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"16px"}}>2025 Quarterly Estimated Payments</div>
+                <div style={{display:"grid",gridTemplateColumns:w<600?"1fr 1fr":"repeat(4,1fr)",gap:"12px"}}>
+                  {QDATES.map(q=>(
+                    <div key={q.q} style={{background:t.inp,border:`1.5px solid ${t.brd}`,borderRadius:"12px",padding:"16px 14px",textAlign:"center"}}>
+                      <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",marginBottom:"6px"}}>{q.q}</div>
+                      <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"22px",fontWeight:800,color:"#a259ff",marginBottom:"6px"}}>${Math.round(res.qtr).toLocaleString()}</div>
+                      <div style={{fontSize:"13px",fontWeight:600,color:t.txt,marginBottom:"3px"}}>Due {q.due}</div>
+                      <div style={{fontSize:"11px",color:t.mut}}>{q.period}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{marginTop:"12px",padding:"12px 16px",background:t.inp,border:`1.5px solid ${t.brd}`,borderRadius:"10px",fontSize:"13px",color:t.mut,lineHeight:1.7}}>
+                  💡 <strong style={{color:t.txt}}>Pro tip:</strong> Pay via IRS Direct Pay or EFTPS to avoid underpayment penalties.
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
   );
 }
+
 
 // ─── IMPORT TAB ───────────────────────────────────────────────────────────────
 function ImportTab({onImport,selMonth,selYear,t,dark}){
