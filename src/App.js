@@ -205,9 +205,12 @@ function calcTaxes({gross,status,state,ded}){
 
 // ─── PLANS ───────────────────────────────────────────────────────────────────────
 const PLANS = {
-  free:     { name:"Free",     price:0,   period:"",    platformLimit:1,  color:"#60607a", badge:"FREE"     },
-  pro:      { name:"Gold",     price:12,  period:"/mo", platformLimit:5,  color:"#f5a623", badge:"GOLD"    },
-  business: { name:"Platinum", price:29,  period:"/mo", platformLimit:Infinity, color:"#a259ff", badge:"PLATINUM" },
+  free:     { name:"Free",     price:0,   period:"",    platformLimit:1,        color:"#60607a", badge:"FREE",    
+    features:{smartImport:false, recurring:false, taxDeduction:false, csvExport:false, yoy:false, multiYear:false} },
+  pro:      { name:"Gold",     price:12,  period:"/mo", platformLimit:5,        color:"#f5a623", badge:"GOLD",   
+    features:{smartImport:true,  recurring:true,  taxDeduction:true,  csvExport:true,  yoy:false, multiYear:false} },
+  business: { name:"Platinum", price:29,  period:"/mo", platformLimit:Infinity, color:"#a259ff", badge:"PLATINUM",
+    features:{smartImport:true,  recurring:true,  taxDeduction:true,  csvExport:true,  yoy:true,  multiYear:true } },
 };
 
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
@@ -825,6 +828,21 @@ function YearOverviewTab({entries,dark,userProfile}){
 
   return(
     <div>
+      {/* Free plan upgrade banner */}
+      {plan==="free"&&(
+        <div className={`fi ${animIn?"on":""}`} style={{background:`linear-gradient(135deg,#f5a62318,#f5a62306)`,border:`1.5px solid #f5a62344`,borderRadius:"14px",padding:"14px 20px",marginBottom:"20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px",transitionDelay:"0.02s"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+            <span style={{fontSize:"20px"}}>⭐</span>
+            <div>
+              <div style={{fontSize:"13px",fontWeight:700,color:"#f5a623"}}>You're on the Free plan</div>
+              <div style={{fontSize:"12px",color:t.mut}}>Unlock CSV export, Smart Import, recurring expenses & more with Gold</div>
+            </div>
+          </div>
+          <button className="btn" onClick={onUpgrade} style={{background:`linear-gradient(135deg,#f5a623,#e09400)`,color:"#fff",padding:"8px 20px",fontSize:"13px",fontWeight:700,borderRadius:"8px",whiteSpace:"nowrap"}}>
+            Upgrade to Gold →
+          </button>
+        </div>
+      )}
       {/* Year selector + export */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"26px",flexWrap:"wrap",gap:"12px"}}>
         <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
@@ -845,8 +863,13 @@ function YearOverviewTab({entries,dark,userProfile}){
           </div>
         </div>
         <div style={{display:"flex",gap:"8px"}}>
-          <button className="btn" onClick={()=>exportCSV(entries,yr)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"9px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px"}}>↓ Export {yr}</button>
-          <button className="btn" onClick={()=>exportCSV(entries,null)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"9px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px"}}>↓ All Data</button>
+          {PLANS[plan]?.features?.csvExport
+            ?<>
+              <button className="btn" onClick={()=>exportCSV(entries,yr)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"9px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px"}}>↓ Export {yr}</button>
+              <button className="btn" onClick={()=>exportCSV(entries,null)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"9px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px"}}>↓ All Data</button>
+            </>
+            :<button className="btn" onClick={onUpgrade} style={{background:"transparent",border:`1.5px solid #f5a62344`,color:"#f5a623",padding:"9px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px"}}>🔒 Export · Gold</button>
+          }
         </div>
       </div>
 
@@ -988,20 +1011,22 @@ function YearOverviewTab({entries,dark,userProfile}){
         </div>
       </div>
 
-      {/* YoY */}
+      {/* YoY — Platinum only */}
       {prev>0&&(
-        <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"26px",marginBottom:"18px",transitionDelay:"0.45s"}}>
-          <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"18px"}}>Year-over-Year — {yr} vs {yr-1}</div>
-          <ResponsiveContainer width="100%" height={170}>
-            <LineChart data={yoyD} margin={{top:6,right:10,left:0,bottom:4}}>
-              <XAxis dataKey="month" tick={tickStyle} axisLine={false} tickLine={false}/>
-              <YAxis tick={tickStyle} axisLine={false} tickLine={false} tickFormatter={yFmt}/>
-              <Tooltip content={p=><CTip {...p} dark={dark}/>}/>
-              <Line type="monotone" dataKey={yr} name={String(yr)} stroke={t.acc} strokeWidth={3} dot={false} activeDot={{r:6,fill:t.acc,strokeWidth:0}}/>
-              <Line type="monotone" dataKey={yr-1} name={String(yr-1)} stroke={t.fnt} strokeWidth={2} strokeDasharray="5 5" dot={false}/>
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <UpgradeGate allowed={PLANS[plan]?.features?.yoy} feature="Year-over-Year Comparison" requiredPlan="Platinum" onUpgrade={onUpgrade} t={t} dark={dark}>
+          <div className={`fi ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"26px",marginBottom:"18px",transitionDelay:"0.45s"}}>
+            <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"18px"}}>Year-over-Year — {yr} vs {yr-1}</div>
+            <ResponsiveContainer width="100%" height={170}>
+              <LineChart data={yoyD} margin={{top:6,right:10,left:0,bottom:4}}>
+                <XAxis dataKey="month" tick={tickStyle} axisLine={false} tickLine={false}/>
+                <YAxis tick={tickStyle} axisLine={false} tickLine={false} tickFormatter={yFmt}/>
+                <Tooltip content={p=><CTip {...p} dark={dark}/>}/>
+                <Line type="monotone" dataKey={yr} name={String(yr)} stroke={t.acc} strokeWidth={3} dot={false} activeDot={{r:6,fill:t.acc,strokeWidth:0}}/>
+                <Line type="monotone" dataKey={yr-1} name={String(yr-1)} stroke={t.fnt} strokeWidth={2} strokeDasharray="5 5" dot={false}/>
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </UpgradeGate>
       )}
 
       {/* Ranked list */}
@@ -1351,7 +1376,7 @@ function TaxTab({entries,dark,userProfile,onUpdateProfile,expenseDeductions=0,ex
 
 
 // ─── IMPORT TAB ───────────────────────────────────────────────────────────────
-function ImportTab({onImport,selMonth,selYear,t,dark}){
+function ImportTab({onImport,selMonth,selYear,t,dark,plan="free",onUpgrade}){
   const [dragOver,setDragOver]=useState(false);
   const [file,setFile]=useState(null);
   const [paste,setPaste]=useState("");
@@ -1857,7 +1882,7 @@ function LandingPage({dark,onEnter,t}){
 
 
 
-function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpense:addExpenseProp,updateExpense:updateExpenseProp,deleteExpense:deleteExpenseProp}){
+function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpense:addExpenseProp,updateExpense:updateExpenseProp,deleteExpense:deleteExpenseProp,plan="free",onUpgrade}){
   const t=T(dark);
   const w=useW();
 
@@ -2287,14 +2312,21 @@ function ExpensesTab({entries,dark,selMonth,selYear,expenses,setExpenses,addExpe
 
           {/* Recurring + Tax deduction */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"18px"}}>
-            {/* Recurring */}
-            <div style={{background:form.recurring?`${t.acc}10`:t.inp,border:`1.5px solid ${form.recurring?t.acc:t.brd}`,borderRadius:"12px",padding:"14px",transition:"all .2s"}}>
+            {/* Recurring — Gold+ */}
+            <div style={{background:form.recurring?`${t.acc}10`:t.inp,border:`1.5px solid ${form.recurring?t.acc:t.brd}`,borderRadius:"12px",padding:"14px",transition:"all .2s",position:"relative",overflow:"hidden"}}>
+              {!PLANS[plan]?.features?.recurring&&(
+                <div onClick={onUpgrade} style={{position:"absolute",inset:0,background:`${t.bg}dd`,backdropFilter:"blur(3px)",display:"flex",alignItems:"center",justifyContent:"center",gap:"10px",cursor:"pointer",borderRadius:"12px",zIndex:2}}>
+                  <span style={{fontSize:"14px"}}>🔒</span>
+                  <span style={{fontSize:"13px",fontWeight:700,color:"#f5a623"}}>Recurring — Gold Plan</span>
+                  <span style={{fontSize:"12px",color:t.mut}}>Tap to upgrade</span>
+                </div>
+              )}
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:form.recurring?"12px":"0"}}>
                 <div>
                   <div style={{fontSize:"13px",fontWeight:700,color:t.txt}}>🔁 Recurring</div>
                   <div style={{fontSize:"11px",color:t.mut}}>Auto-adds each period</div>
                 </div>
-                <button className="btn" onClick={()=>setForm({...form,recurring:!form.recurring})} style={{padding:"6px 14px",fontSize:"12px",fontWeight:700,background:form.recurring?t.acc:"transparent",color:form.recurring?"#fff":t.mut,border:`1.5px solid ${form.recurring?t.acc:t.brd}`,borderRadius:"7px"}}>
+                <button className="btn" onClick={()=>PLANS[plan]?.features?.recurring&&setForm({...form,recurring:!form.recurring})} style={{padding:"6px 14px",fontSize:"12px",fontWeight:700,background:form.recurring?t.acc:"transparent",color:form.recurring?"#fff":t.mut,border:`1.5px solid ${form.recurring?t.acc:t.brd}`,borderRadius:"7px"}}>
                   {form.recurring?"✓ On":"Off"}
                 </button>
               </div>
@@ -2662,6 +2694,33 @@ function OnboardingFlow({dark,userProfile,onComplete,t,addEntry,selYear}){
 
       {/* Step indicator text */}
       <div style={{marginTop:"20px",fontSize:"13px",color:t.fnt}}>Step {step} of {steps.length}</div>
+    </div>
+  );
+}
+
+// ─── UPGRADE GATE ────────────────────────────────────────────────────────────
+// Wraps any feature — shows a blur + upgrade prompt if user doesn't have access
+function UpgradeGate({children,allowed,feature,requiredPlan="pro",onUpgrade,t,dark}){
+  if(allowed) return children;
+  const planInfo=Object.values(PLANS).find(p=>p.name===requiredPlan)||PLANS.pro;
+  return(
+    <div style={{position:"relative",borderRadius:"16px",overflow:"hidden"}}>
+      {/* Blurred content preview */}
+      <div style={{filter:"blur(4px)",pointerEvents:"none",userSelect:"none",opacity:0.5}}>
+        {children}
+      </div>
+      {/* Overlay */}
+      <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:`${T(dark).bg}cc`,backdropFilter:"blur(2px)",borderRadius:"16px",border:`1.5px solid ${planInfo.color}44`,padding:"32px",textAlign:"center"}}>
+        <div style={{fontSize:"32px",marginBottom:"12px"}}>🔒</div>
+        <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"18px",fontWeight:800,color:T(dark).txt,marginBottom:"6px"}}>{feature}</div>
+        <div style={{fontSize:"13px",color:T(dark).mut,marginBottom:"20px",maxWidth:"280px",lineHeight:1.6}}>
+          This feature is available on the <strong style={{color:planInfo.color}}>{planInfo.name}</strong> plan and above.
+        </div>
+        <button className="btn" onClick={onUpgrade} style={{background:`linear-gradient(135deg,${planInfo.color},${planInfo.color}bb)`,color:"#fff",padding:"11px 28px",fontSize:"14px",fontWeight:700,borderRadius:"10px",boxShadow:`0 8px 24px ${planInfo.color}44`}}>
+          Upgrade to {planInfo.name} →
+        </button>
+        <div style={{marginTop:"10px",fontSize:"12px",color:T(dark).mut}}>${planInfo.price}/mo · Cancel anytime</div>
+      </div>
     </div>
   );
 }
@@ -3125,7 +3184,7 @@ export default function App(){
               {/* Menu items */}
               {[
                 {icon:"⚙️", label:"Settings", action:()=>{setShowMenu(false);setShowSettings(true);}},
-                {icon:"📤", label:"Export Data", action:()=>{setShowMenu(false);exportCSV(entries,null);}},
+                {icon:"📤", label:PLANS[plan]?.features?.csvExport?"Export Data":"Export · Gold 🔒", action:()=>{setShowMenu(false);PLANS[plan]?.features?.csvExport?exportCSV(entries,null):setTab("pricing");}},
                 {icon:"⚡", label:"Upgrade Plan", action:()=>{setShowMenu(false);setTab("pricing");}, accent:true},
                 {icon:"📊", label:"Smart Import"+(importCount>0?` · ${importCount}`:""), action:()=>{setShowMenu(false);setTab("import");}},
               ].map(item=>(
@@ -3152,11 +3211,11 @@ export default function App(){
 
       {/* Content */}
       <div style={{padding:w<600?"16px 14px":"36px 40px",maxWidth:"1200px",margin:"0 auto"}}>
-        {tab==="overview" &&<YearOverviewTab entries={entries} dark={dark} userProfile={userProfile}/>}
+        {tab==="overview" &&<YearOverviewTab entries={entries} dark={dark} userProfile={userProfile} plan={plan} onUpgrade={()=>setTab("pricing")}/>}
         {tab==="monthly"  &&<MonthlyDetailTab entries={entries} setEntries={setEntries} dark={dark} selMonth={selMonth} setSelMonth={setSelMonth} selYear={SEL_YEAR} userProfile={userProfile} addEntry={addEntry} deleteEntry={deleteEntry} plan={plan} onUpgrade={()=>setTab("pricing")}/>}
-        {tab==="expenses" &&<ExpensesTab entries={entries} dark={dark} selMonth={selMonth} selYear={SEL_YEAR} expenses={expenses} setExpenses={setExpenses} addExpense={addExpense} updateExpense={updateExpense} deleteExpense={deleteExpense}/>}
+        {tab==="expenses" &&<ExpensesTab entries={entries} dark={dark} selMonth={selMonth} selYear={SEL_YEAR} expenses={expenses} setExpenses={setExpenses} addExpense={addExpense} updateExpense={updateExpense} deleteExpense={deleteExpense} plan={plan} onUpgrade={()=>setTab("pricing")}/>}
         {tab==="taxes"    &&<TaxTab entries={entries} dark={dark} userProfile={userProfile} onUpdateProfile={updateProfile} expenseDeductions={expenses.filter(e=>e.taxDeduction).reduce((s,e)=>s+e.amount,0)} expenseDedCount={expenses.filter(e=>e.taxDeduction).length}/>}
-        {tab==="import"   &&<ImportTab onImport={handleImport} selMonth={selMonth} selYear={SEL_YEAR} t={t} dark={dark}/>}
+        {tab==="import"   &&<ImportTab onImport={handleImport} selMonth={selMonth} selYear={SEL_YEAR} t={t} dark={dark} plan={plan} onUpgrade={()=>setTab("pricing")}/>}
         {tab==="pricing"  &&<PricingTab dark={dark} currentPlan={plan} onUpgrade={p=>setPlan(p)} authUser={authUser} t={t}/>}
         {tab==="settings"  &&<div/>}
 
