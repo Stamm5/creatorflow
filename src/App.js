@@ -1026,36 +1026,7 @@ function YearOverviewTab({entries,dark,userProfile}){
         ))}
       </div>
 
-      {/* Mini platform charts */}
-      <div style={{display:"grid",gridTemplateColumns:w<700?"1fr":"1fr 1fr",gap:"14px"}}>
-        {pRank.map((p,idx)=>(
-          <div key={p.name} className={`fi card ${animIn?"on":""}`} style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"16px",padding:"20px",transitionDelay:`${.58+idx*.05}s`,position:"relative",overflow:"hidden"}}>
-            <div style={{position:"absolute",top:0,left:0,right:0,height:"3px",background:`linear-gradient(90deg,${p.color},${p.color}00)`}}/>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"14px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-                <PlatLogo name={p.name} size={38}/>
-                <div>
-                  <div style={{fontSize:"14px",fontWeight:700,color:t.txt}}>{p.name}</div>
-                  <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"22px",fontWeight:800,color:p.color}}>${p.total.toLocaleString()}</div>
-                </div>
-              </div>
-              <div style={{textAlign:"right",background:t.inp,padding:"8px 12px",borderRadius:"10px"}}>
-                <div style={{fontSize:"11px",color:t.mut,fontWeight:600}}>AVG/MO</div>
-                <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"16px",fontWeight:800,color:p.color}}>${Math.round(p.total/12).toLocaleString()}</div>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={75}>
-              <AreaChart data={p.monthly} margin={{top:2,right:2,left:-28,bottom:2}}>
-                <defs><linearGradient id={`g${p.name.replace(/[^a-z]/gi,"")}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={p.color} stopOpacity={.28}/><stop offset="95%" stopColor={p.color} stopOpacity={0}/></linearGradient></defs>
-                <XAxis dataKey="month" tick={{fill:t.mut,fontSize:10}} axisLine={false} tickLine={false}/>
-                <YAxis hide/>
-                <Tooltip content={pp=><CTip {...pp} dark={dark}/>}/>
-                <Area type="monotone" dataKey="amount" name={p.name} stroke={p.color} strokeWidth={2} fill={`url(#g${p.name.replace(/[^a-z]/gi,"")})`} dot={false} activeDot={{r:4,fill:p.color,strokeWidth:0}}/>
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        ))}
-      </div>
+
     </div>
   );
 }
@@ -2682,7 +2653,9 @@ export default function App(){
   const [expenses,setExpenses]=useState([]);
   const [authUser,setAuthUser]=useState(null);      // real Supabase auth user
   const [plan,setPlan]=useState("free");               // free | pro | business
-  const [isNewUser,setIsNewUser]=useState(false);        // true = show onboarding after signup
+  const [isNewUser,setIsNewUser]=useState(false);
+  const [showMenu,setShowMenu]=useState(false);           // profile dropdown
+  const [showSettings,setShowSettings]=useState(false);  // settings modal
   const [loading,setLoading]=useState(true);         // true while checking auth + loading data
   const [dbError,setDbError]=useState(null);         // surface any load errors
 
@@ -2875,11 +2848,9 @@ export default function App(){
 
   const TABS=[
     {id:"overview", label:"Dashboard"},
-    {id:"monthly",  label:"Monthly Breakdown"},
-    {id:"expenses", label:"Expenses & Fees"},
-    {id:"taxes",    label:"Tax Estimator"},
-    {id:"import",   label:importCount>0?`Smart Import · ${importCount}`:"Smart Import"},
-    {id:"pricing",  label:"⚡ Plans"},
+    {id:"monthly",  label:"Monthly"},
+    {id:"expenses", label:"Expenses"},
+    {id:"taxes",    label:"Taxes"},
   ];
 
   // ── Full-screen loading spinner ───────────────────────────────────────────
@@ -2991,72 +2962,166 @@ export default function App(){
     <div style={{minHeight:"100vh",background:t.bg,color:t.txt}}>
       <GlobalCSS dark={dark}/>
 
-      {/* Header */}
-      <div style={{borderBottom:`1px solid ${t.brd}`,padding:w<600?"10px 16px":"14px 36px",display:"flex",alignItems:"center",justifyContent:"space-between",background:t.nav,position:"sticky",top:0,zIndex:50,backdropFilter:"blur(14px)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:"10px",cursor:"pointer"}} onClick={()=>setPage("landing")}>
-          <div style={{width:"38px",height:"38px",borderRadius:"11px",background:`linear-gradient(135deg,${t.acc},#7b8cff)`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="38" height="38" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="44" height="44" rx="12" fill="url(#cfgradapp)"/><defs><linearGradient id="cfgradapp" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#00D4A0"/><stop offset="100%" stopColor="#5B6BFF"/></linearGradient></defs><rect x="9" y="28" width="6" height="8" rx="2" fill="white" fillOpacity="0.55"/><rect x="19" y="21" width="6" height="15" rx="2" fill="white" fillOpacity="0.8"/><rect x="29" y="13" width="6" height="23" rx="2" fill="white"/><path d="M32 10 L32 6" stroke="white" strokeWidth="2" strokeLinecap="round"/><path d="M30 8 L32 6 L34 8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></div>
-          <div>
-            <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"18px",fontWeight:800,color:t.txt,lineHeight:1.1}}>CreatorFlow</div>
-            <div style={{fontSize:"11px",color:t.mut,fontWeight:500,lineHeight:1.1,marginTop:"1px"}}>Income Tracker</div>
-          </div>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-          {/* Plan badge — clickable */}
-          {authUser&&(
-            <div onClick={()=>setTab("pricing")} style={{cursor:"pointer",background:PLANS[plan].color+"22",border:`1.5px solid ${PLANS[plan].color}44`,padding:"5px 11px",borderRadius:"7px"}}>
-              <span style={{fontSize:"11px",fontWeight:800,color:PLANS[plan].color,letterSpacing:"0.5px"}}>{PLANS[plan].badge}</span>
+      {/* ── Settings Modal ── */}
+      {showSettings&&(
+        <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)"}} onClick={()=>setShowSettings(false)}>
+          <div style={{background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"20px",padding:"32px",width:"100%",maxWidth:"440px",margin:"20px"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"24px"}}>
+              <div style={{fontFamily:"'Outfit',sans-serif",fontSize:"20px",fontWeight:800,color:t.txt}}>Settings</div>
+              <button className="btn" onClick={()=>setShowSettings(false)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,width:"32px",height:"32px",borderRadius:"8px",fontSize:"16px",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
             </div>
-          )}
-          {/* Avatar + name — compact */}
-          {userProfile.name&&userProfile.name!=="Guest"&&(
-            <div style={{display:"flex",alignItems:"center",gap:"7px",background:t.inp,border:`1.5px solid ${t.brd}`,padding:"6px 12px",borderRadius:"10px"}}>
-              <div style={{width:"24px",height:"24px",borderRadius:"7px",background:`linear-gradient(135deg,${t.acc},#7b8cff)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:800,color:"#fff",flexShrink:0}}>
-                {userProfile.name[0]?.toUpperCase()}
-              </div>
-              <div>
-                <div style={{fontSize:"13px",fontWeight:600,color:t.txt}}>{userProfile.name}</div>
-                {userProfile.state&&<div style={{fontSize:"11px",color:t.mut,marginTop:"1px"}}>{userProfile.state}</div>}
+            {/* Profile section */}
+            <div style={{marginBottom:"20px"}}>
+              <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"12px"}}>Profile</div>
+              <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+                <div>
+                  <div style={{fontSize:"12px",color:t.mut,fontWeight:600,marginBottom:"5px"}}>Display Name</div>
+                  <input defaultValue={userProfile.name} id="s-name" style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.txt,padding:"10px 14px",fontSize:"14px",width:"100%",borderRadius:"10px",fontFamily:"'Plus Jakarta Sans',sans-serif"}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:"12px",color:t.mut,fontWeight:600,marginBottom:"5px"}}>Email</div>
+                  <input defaultValue={authUser?.email||""} disabled style={{background:t.fnt,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"10px 14px",fontSize:"14px",width:"100%",borderRadius:"10px",fontFamily:"'Plus Jakarta Sans',sans-serif",cursor:"not-allowed"}}/>
+                  <div style={{fontSize:"11px",color:t.mut,marginTop:"4px"}}>Email cannot be changed yet</div>
+                </div>
               </div>
             </div>
-          )}
-          {/* Dark mode */}
-          <button className="btn" onClick={()=>setDark(d=>!d)} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"8px 12px",fontSize:"13px",borderRadius:"10px"}}>{dark?"☀":"◑"}</button>
-          {/* Log out / Log in */}
-          {authUser
-            ?<button className="btn" onClick={handleLogout} style={{background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut,padding:"8px 14px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>Log Out</button>
-            :<button className="btn" onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${t.acc},#00a87a)`,color:"#fff",padding:"8px 16px",fontSize:"13px",fontWeight:700,borderRadius:"10px"}}>Log In</button>
-          }
-        </div>
-      </div>
-
-      {/* Nav */}
-      <div style={{borderBottom:`1px solid ${t.brd}`,padding:w<600?"0 8px":"0 36px",display:"flex",background:t.nav,overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
-        {TABS.map(tb=>{
-          const isImp=tb.id==="import"&&importCount>0, isAct=tab===tb.id;
-          return(
-            <button key={tb.id} className="nb" onClick={()=>setTab(tb.id)} style={{
-              padding:w<600?"12px 14px":"16px 22px",fontSize:w<600?"12px":"14px",whiteSpace:"nowrap",
-              fontWeight:isAct?700:500,
-              color:isImp?(isAct?t.acc:`${t.acc}88`):(isAct?t.txt:t.mut),
-              borderBottom:`3px solid ${isAct?t.acc:"transparent"}`,
-              marginBottom:"-1px",
-            }}>
-              {tb.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Guest banner */}
-      {!authUser&&(
-        <div style={{background:`linear-gradient(90deg,#7b8cff22,#00d4a022)`,borderBottom:`1px solid #7b8cff44`,padding:w<600?"10px 14px":"10px 36px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-            <span style={{fontSize:"16px"}}>👋</span>
-            <span style={{fontSize:"13px",color:t.txt,fontWeight:500}}>You're in guest mode — <strong>data won't be saved</strong> when you close the tab.</span>
+            {/* Tax profile */}
+            <div style={{marginBottom:"20px"}}>
+              <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"12px"}}>Tax Profile</div>
+              <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+                <div>
+                  <div style={{fontSize:"12px",color:t.mut,fontWeight:600,marginBottom:"5px"}}>State</div>
+                  <StatePicker value={userProfile.state} onChange={v=>updateProfile({state:v})} t={t}/>
+                </div>
+                <div>
+                  <div style={{fontSize:"12px",color:t.mut,fontWeight:600,marginBottom:"5px"}}>Filing Status</div>
+                  <div style={{display:"flex",gap:"6px"}}>
+                    {Object.entries(FILING).map(([k,v])=>(
+                      <button key={k} className="btn" onClick={()=>updateProfile({filingStatus:k})} style={{flex:1,padding:"9px 6px",fontSize:"12px",fontWeight:600,background:userProfile.filingStatus===k?t.acc:t.inp,color:userProfile.filingStatus===k?"#fff":t.mut,border:`1.5px solid ${userProfile.filingStatus===k?t.acc:t.brd}`,borderRadius:"8px"}}>
+                        {v==="Married Filing Jointly"?"Married":v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Appearance */}
+            <div style={{marginBottom:"24px"}}>
+              <div style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"12px"}}>Appearance</div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:t.inp,border:`1.5px solid ${t.brd}`,borderRadius:"10px",padding:"12px 16px"}}>
+                <span style={{fontSize:"14px",color:t.txt,fontWeight:500}}>{dark?"Dark Mode":"Light Mode"}</span>
+                <button className="btn" onClick={()=>setDark(d=>!d)} style={{background:t.crd,border:`1.5px solid ${t.brd}`,color:t.txt,padding:"7px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px"}}>{dark?"☀ Light":"◑ Dark"}</button>
+              </div>
+            </div>
+            {/* Save + danger zone */}
+            <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+              <button className="btn" onClick={()=>{
+                const nameEl=document.getElementById("s-name");
+                if(nameEl&&nameEl.value) updateProfile({name:nameEl.value});
+                setShowSettings(false);
+              }} style={{background:`linear-gradient(135deg,${t.acc},#00a87a)`,color:"#fff",padding:"12px",fontSize:"14px",fontWeight:700,borderRadius:"10px"}}>
+                Save Changes
+              </button>
+              <button className="btn" onClick={()=>{setShowSettings(false);handleLogout();}} style={{background:"transparent",border:`1.5px solid ${t.dan}44`,color:t.dan,padding:"11px",fontSize:"13px",fontWeight:600,borderRadius:"10px"}}>
+                Log Out
+              </button>
+            </div>
           </div>
-          <button className="btn" onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${t.acc},#00a87a)`,color:"#fff",padding:"8px 20px",fontSize:"13px",fontWeight:700,borderRadius:"8px"}}>Create Free Account →</button>
         </div>
       )}
+
+      {/* ── Dropdown backdrop ── */}
+      {showMenu&&<div style={{position:"fixed",inset:0,zIndex:49}} onClick={()=>setShowMenu(false)}/>}
+
+      {/* ── Header ── */}
+      <div style={{borderBottom:`1px solid ${t.brd}`,padding:w<600?"10px 16px":"12px 32px",display:"flex",alignItems:"center",justifyContent:"space-between",background:t.nav,position:"sticky",top:0,zIndex:50,backdropFilter:"blur(14px)"}}>
+        {/* Logo */}
+        <div style={{display:"flex",alignItems:"center",gap:"10px",cursor:"pointer"}} onClick={()=>setPage("landing")}>
+          <div style={{width:"36px",height:"36px",borderRadius:"10px",background:`linear-gradient(135deg,${t.acc},#7b8cff)`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="36" height="36" viewBox="0 0 44 44" fill="none"><rect width="44" height="44" rx="12" fill="url(#cfgradapp)"/><defs><linearGradient id="cfgradapp" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#00D4A0"/><stop offset="100%" stopColor="#5B6BFF"/></linearGradient></defs><rect x="9" y="28" width="6" height="8" rx="2" fill="white" fillOpacity="0.55"/><rect x="19" y="21" width="6" height="15" rx="2" fill="white" fillOpacity="0.8"/><rect x="29" y="13" width="6" height="23" rx="2" fill="white"/><path d="M32 10 L32 6" stroke="white" strokeWidth="2" strokeLinecap="round"/><path d="M30 8 L32 6 L34 8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></div>
+          {w>=500&&<span style={{fontFamily:"'Outfit',sans-serif",fontSize:"18px",fontWeight:800,color:t.txt}}>CreatorFlow</span>}
+        </div>
+
+        {/* ── Nav tabs (4 core) — inline with header ── */}
+        <div style={{display:"flex",alignItems:"center",gap:"2px"}}>
+          {TABS.map(tb=>{
+            const isAct=tab===tb.id;
+            return(
+              <button key={tb.id} className="nb" onClick={()=>setTab(tb.id)} style={{
+                padding:w<500?"10px 12px":"11px 18px",
+                fontSize:w<500?"12px":"13px",
+                fontWeight:isAct?700:500,
+                color:isAct?t.txt:t.mut,
+                borderRadius:"10px",
+                background:isAct?t.inp:"transparent",
+                border:isAct?`1.5px solid ${t.brd}`:"1.5px solid transparent",
+                whiteSpace:"nowrap",
+              }}>
+                {tb.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Avatar menu ── */}
+        <div style={{position:"relative"}}>
+          <button className="btn" onClick={()=>setShowMenu(v=>!v)} style={{display:"flex",alignItems:"center",gap:"8px",background:t.inp,border:`1.5px solid ${showMenu?t.acc:t.brd}`,padding:"7px 12px",borderRadius:"10px",cursor:"pointer",transition:"border-color .15s"}}>
+            <div style={{width:"26px",height:"26px",borderRadius:"8px",background:`linear-gradient(135deg,${t.acc},#7b8cff)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800,color:"#fff",flexShrink:0}}>
+              {authUser?(userProfile.name?.[0]?.toUpperCase()||"U"):"G"}
+            </div>
+            {w>=600&&authUser&&(
+              <div style={{textAlign:"left"}}>
+                <div style={{fontSize:"13px",fontWeight:600,color:t.txt,lineHeight:1.2}}>{userProfile.name||"User"}</div>
+                {userProfile.state&&<div style={{fontSize:"11px",color:t.mut}}>{userProfile.state}</div>}
+              </div>
+            )}
+            <span style={{fontSize:"10px",color:t.mut,marginLeft:"2px"}}>▾</span>
+          </button>
+
+          {/* Dropdown menu */}
+          {showMenu&&(
+            <div style={{position:"absolute",top:"calc(100% + 8px)",right:0,background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"14px",padding:"8px",minWidth:"200px",zIndex:100,boxShadow:`0 16px 40px rgba(0,0,0,0.25)`}}>
+              {/* User info */}
+              <div style={{padding:"10px 12px",marginBottom:"4px"}}>
+                <div style={{fontSize:"13px",fontWeight:700,color:t.txt}}>{userProfile.name||"Guest"}</div>
+                <div style={{fontSize:"11px",color:t.mut}}>{authUser?.email||"Guest mode"}</div>
+              </div>
+              {/* Plan badge */}
+              {authUser&&(
+                <div style={{padding:"6px 12px",marginBottom:"4px"}}>
+                  <div style={{display:"inline-flex",alignItems:"center",gap:"6px",background:PLANS[plan].color+"22",border:`1.5px solid ${PLANS[plan].color}44`,padding:"4px 10px",borderRadius:"6px"}}>
+                    <span style={{fontSize:"11px",fontWeight:800,color:PLANS[plan].color}}>{PLANS[plan].badge}</span>
+                    <span style={{fontSize:"11px",color:t.mut}}>{PLANS[plan].name} Plan</span>
+                  </div>
+                </div>
+              )}
+              <div style={{height:"1px",background:t.brd,margin:"6px 0"}}/>
+              {/* Menu items */}
+              {[
+                {icon:"⚙️", label:"Settings", action:()=>{setShowMenu(false);setShowSettings(true);}},
+                {icon:"📤", label:"Export Data", action:()=>{setShowMenu(false);exportCSV(entries,null);}},
+                {icon:"⚡", label:"Upgrade Plan", action:()=>{setShowMenu(false);setTab("pricing");}, accent:true},
+                {icon:"📊", label:"Smart Import"+(importCount>0?` · ${importCount}`:""), action:()=>{setShowMenu(false);setTab("import");}},
+              ].map(item=>(
+                <button key={item.label} className="btn" onClick={item.action} style={{width:"100%",display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",borderRadius:"9px",background:"transparent",border:"none",color:item.accent?t.acc:t.txt,fontSize:"13px",fontWeight:item.accent?700:500,textAlign:"left",cursor:"pointer"}}>
+                  <span style={{fontSize:"15px"}}>{item.icon}</span>
+                  {item.label}
+                </button>
+              ))}
+              <div style={{height:"1px",background:t.brd,margin:"6px 0"}}/>
+              {authUser
+                ?<button className="btn" onClick={()=>{setShowMenu(false);handleLogout();}} style={{width:"100%",display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",borderRadius:"9px",background:"transparent",border:"none",color:t.dan,fontSize:"13px",fontWeight:500,textAlign:"left",cursor:"pointer"}}>
+                  <span style={{fontSize:"15px"}}>🚪</span> Log Out
+                </button>
+                :<button className="btn" onClick={()=>{setShowMenu(false);setPage("login");}} style={{width:"100%",display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",borderRadius:"9px",background:`linear-gradient(135deg,${t.acc},#00a87a)`,border:"none",color:"#fff",fontSize:"13px",fontWeight:700,textAlign:"left",cursor:"pointer"}}>
+                  <span style={{fontSize:"15px"}}>→</span> Log In
+                </button>
+              }
+            </div>
+          )}
+        </div>
+      </div>
+
+
 
       {/* Content */}
       <div style={{padding:w<600?"16px 14px":"36px 40px",maxWidth:"1200px",margin:"0 auto"}}>
@@ -3066,6 +3131,7 @@ export default function App(){
         {tab==="taxes"    &&<TaxTab entries={entries} dark={dark} userProfile={userProfile} onUpdateProfile={updateProfile} expenseDeductions={expenses.filter(e=>e.taxDeduction).reduce((s,e)=>s+e.amount,0)} expenseDedCount={expenses.filter(e=>e.taxDeduction).length}/>}
         {tab==="import"   &&<ImportTab onImport={handleImport} selMonth={selMonth} selYear={SEL_YEAR} t={t} dark={dark}/>}
         {tab==="pricing"  &&<PricingTab dark={dark} currentPlan={plan} onUpgrade={p=>setPlan(p)} authUser={authUser} t={t}/>}
+        {tab==="settings"  &&<div/>}
 
         {importCount>0&&tab==="import"&&(
           <div className="su" style={{marginTop:"20px",background:t.successBg,border:`1.5px solid ${t.acc}55`,borderRadius:"14px",padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
