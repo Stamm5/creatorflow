@@ -2508,6 +2508,166 @@ function PricingTab({dark,currentPlan,onUpgrade,authUser,t}){
   );
 }
 
+// ─── ONBOARDING FLOW ─────────────────────────────────────────────────────────
+function OnboardingFlow({dark,userProfile,onComplete,t,addEntry,selYear}){
+  const w=useW();
+  const [step,setStep]=useState(1); // 1 | 2 | 3
+  const [animIn,setAnimIn]=useState(false);
+  const [platforms,setPlatforms]=useState([]);
+  const [goal,setGoal]=useState("5000");
+  const [filing,setFiling]=useState(userProfile.filingStatus||"single");
+  const [adding,setAdding]=useState(false);
+
+  useEffect(()=>{setTimeout(()=>setAnimIn(true),60);},[]);
+
+  function goStep(n){
+    setAnimIn(false);
+    setTimeout(()=>{setStep(n);setAnimIn(true);},200);
+  }
+
+  function togglePlatform(name){
+    setPlatforms(p=>p.includes(name)?p.filter(x=>x!==name):[...p,name]);
+  }
+
+  async function finish(){
+    setAdding(true);
+    // Add a sample $0 entry for each selected platform so dashboard shows them
+    // (just marks them as active — user will add real amounts)
+    // Actually skip adding entries — just complete onboarding
+    onComplete({goal:parseFloat(goal)||5000, filingStatus:filing, platforms});
+  }
+
+  const POPULAR_PLATFORMS=["YouTube","TikTok","Patreon","Sponsorship","Merch","Affiliate","Instagram","Podcast","Twitch","Substack"];
+
+  const steps=[
+    {n:1, icon:"🎯", title:"What platforms do you earn from?", sub:"Select all that apply — you can always add more later"},
+    {n:2, icon:"💰", title:"Set your monthly income goal", sub:"How much do you want to earn per month? We'll track your progress"},
+    {n:3, icon:"🎉", title:"You're all set!", sub:`Welcome to CreatorFlow, ${userProfile.name?.split(" ")[0]||"Creator"}! Here's what's waiting for you`},
+  ];
+
+  const cur=steps[step-1];
+
+  return(
+    <div style={{minHeight:"100vh",background:t.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"}}>
+      <GlobalCSS dark={dark}/>
+
+      {/* Progress dots */}
+      <div style={{display:"flex",gap:"8px",marginBottom:"40px"}}>
+        {steps.map(s=>(
+          <div key={s.n} style={{width:step===s.n?24:8,height:"8px",borderRadius:"4px",background:step>=s.n?t.acc:t.fnt,transition:"all .3s"}}/>
+        ))}
+      </div>
+
+      {/* Card */}
+      <div className={`fi ${animIn?"on":""}`} style={{width:"100%",maxWidth:"520px",background:t.crd,border:`1.5px solid ${t.cbrd}`,borderRadius:"24px",padding:w<500?"28px 20px":"40px",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:"-60px",right:"-60px",width:"200px",height:"200px",borderRadius:"50%",background:t.acc,opacity:.05,pointerEvents:"none"}}/>
+
+        {/* Step icon + title */}
+        <div style={{textAlign:"center",marginBottom:"32px"}}>
+          <div style={{fontSize:"48px",marginBottom:"16px"}}>{cur.icon}</div>
+          <div style={{fontFamily:"'Outfit',sans-serif",fontSize:w<500?"22px":"28px",fontWeight:800,color:t.txt,marginBottom:"8px",lineHeight:1.2}}>{cur.title}</div>
+          <div style={{fontSize:"14px",color:t.mut,lineHeight:1.6}}>{cur.sub}</div>
+        </div>
+
+        {/* ── STEP 1: Platform picker ── */}
+        {step===1&&(
+          <div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px",marginBottom:"28px"}}>
+              {POPULAR_PLATFORMS.map(name=>{
+                const pm=PLATFORMS.find(p=>p.name===name);
+                const sel=platforms.includes(name);
+                return(
+                  <button key={name} className="btn" onClick={()=>togglePlatform(name)} style={{
+                    display:"flex",alignItems:"center",gap:"10px",
+                    padding:"12px 14px",borderRadius:"12px",
+                    background:sel?`${t.acc}18`:t.inp,
+                    border:`1.5px solid ${sel?t.acc:t.brd}`,
+                    color:sel?t.txt:t.mut,
+                    textAlign:"left",transition:"all .15s",
+                  }}>
+                    {pm?<PlatLogo name={name} size={22}/>:<span style={{fontSize:"16px"}}>📦</span>}
+                    <span style={{fontSize:"13px",fontWeight:sel?700:500}}>{name}</span>
+                    {sel&&<span style={{marginLeft:"auto",color:t.acc,fontSize:"14px"}}>✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{display:"flex",gap:"10px"}}>
+              <button className="btn" onClick={()=>goStep(2)} disabled={platforms.length===0} style={{flex:1,padding:"14px",fontSize:"15px",fontWeight:700,borderRadius:"12px",background:platforms.length>0?`linear-gradient(135deg,${t.acc},#00a87a)`:"#333",color:"#fff",boxShadow:platforms.length>0?`0 8px 24px ${t.glo}`:"none"}}>
+                {platforms.length===0?"Select at least one →":`Continue with ${platforms.length} platform${platforms.length!==1?"s":""} →`}
+              </button>
+            </div>
+            <button className="btn" onClick={()=>goStep(2)} style={{width:"100%",marginTop:"10px",background:"transparent",border:"none",color:t.mut,fontSize:"13px",padding:"8px"}}>
+              Skip for now
+            </button>
+          </div>
+        )}
+
+        {/* ── STEP 2: Income goal ── */}
+        {step===2&&(
+          <div>
+            <div style={{marginBottom:"24px"}}>
+              <div style={{position:"relative",marginBottom:"16px"}}>
+                <span style={{position:"absolute",left:"20px",top:"50%",transform:"translateY(-50%)",fontFamily:"'Outfit',sans-serif",fontSize:"28px",fontWeight:700,color:t.mut}}>$</span>
+                <input value={goal} onChange={e=>setGoal(e.target.value.replace(/[^0-9]/g,""))} placeholder="5000" type="number" style={{background:t.inp,border:`1.5px solid ${t.acc}55`,color:t.txt,padding:"18px 20px 18px 50px",fontSize:"28px",fontWeight:800,width:"100%",borderRadius:"14px",fontFamily:"'Outfit',sans-serif",outline:"none"}}/>
+              </div>
+              {/* Quick pick amounts */}
+              <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+                {["1000","3000","5000","10000","25000","50000"].map(v=>(
+                  <button key={v} className="btn" onClick={()=>setGoal(v)} style={{padding:"7px 16px",fontSize:"13px",fontWeight:600,background:goal===v?t.acc:"transparent",color:goal===v?"#fff":t.mut,border:`1.5px solid ${goal===v?t.acc:t.brd}`,borderRadius:"8px"}}>
+                    ${Number(v).toLocaleString()}
+                  </button>
+                ))}
+              </div>
+              <div style={{marginTop:"12px",fontSize:"13px",color:t.mut,textAlign:"center"}}>
+                That's <strong style={{color:t.txt}}>${Math.round(parseFloat(goal||0)*12).toLocaleString()}</strong> per year
+              </div>
+            </div>
+            <div style={{display:"flex",gap:"10px"}}>
+              <button className="btn" onClick={()=>goStep(1)} style={{padding:"13px 20px",fontSize:"14px",fontWeight:600,borderRadius:"12px",background:t.inp,border:`1.5px solid ${t.brd}`,color:t.mut}}>← Back</button>
+              <button className="btn" onClick={()=>goStep(3)} style={{flex:1,padding:"14px",fontSize:"15px",fontWeight:700,borderRadius:"12px",background:`linear-gradient(135deg,${t.acc},#00a87a)`,color:"#fff",boxShadow:`0 8px 24px ${t.glo}`}}>
+                Continue →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 3: All set ── */}
+        {step===3&&(
+          <div>
+            <div style={{display:"flex",flexDirection:"column",gap:"12px",marginBottom:"28px"}}>
+              {[
+                {icon:"📊",title:"Dashboard ready",desc:"Your yearly and monthly views are set up and waiting for data"},
+                {icon:"🧾",title:"Tax estimator configured",desc:userProfile.state?`Calculating real taxes for ${userProfile.state}`:"Set your state in Tax Estimator for accurate calculations"},
+                {icon:"💰",title:`Goal set to $${Number(goal||5000).toLocaleString()}/mo`,desc:`We'll track your progress toward $${Math.round((parseFloat(goal)||5000)*12).toLocaleString()} this year`},
+                platforms.length>0?{icon:"🎯",title:`${platforms.length} platform${platforms.length!==1?"s":""} selected`,desc:platforms.slice(0,3).join(", ")+(platforms.length>3?` + ${platforms.length-3} more`:"")}:null,
+              ].filter(Boolean).map(item=>(
+                <div key={item.title} style={{display:"flex",alignItems:"center",gap:"14px",padding:"14px",background:t.inp,border:`1.5px solid ${t.brd}`,borderRadius:"12px"}}>
+                  <div style={{width:"40px",height:"40px",borderRadius:"10px",background:`${t.acc}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",flexShrink:0}}>{item.icon}</div>
+                  <div>
+                    <div style={{fontSize:"13px",fontWeight:700,color:t.txt,marginBottom:"2px"}}>{item.title}</div>
+                    <div style={{fontSize:"12px",color:t.mut}}>{item.desc}</div>
+                  </div>
+                  <div style={{marginLeft:"auto",color:t.acc,fontSize:"16px"}}>✓</div>
+                </div>
+              ))}
+            </div>
+            <button className="btn" onClick={finish} disabled={adding} style={{width:"100%",padding:"16px",fontSize:"16px",fontWeight:800,borderRadius:"14px",background:`linear-gradient(135deg,${t.acc},#00a87a)`,color:"#fff",boxShadow:`0 8px 32px ${t.glo}`,letterSpacing:"0.2px"}}>
+              {adding?"Setting up…":"Take me to my Dashboard →"}
+            </button>
+            <button className="btn" onClick={()=>goStep(2)} style={{width:"100%",marginTop:"8px",background:"transparent",border:"none",color:t.mut,fontSize:"13px",padding:"8px"}}>
+              ← Go back
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Step indicator text */}
+      <div style={{marginTop:"20px",fontSize:"13px",color:t.fnt}}>Step {step} of {steps.length}</div>
+    </div>
+  );
+}
+
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function App(){
   const [dark,setDark]=useState(true);
@@ -2522,6 +2682,7 @@ export default function App(){
   const [expenses,setExpenses]=useState([]);
   const [authUser,setAuthUser]=useState(null);      // real Supabase auth user
   const [plan,setPlan]=useState("free");               // free | pro | business
+  const [isNewUser,setIsNewUser]=useState(false);        // true = show onboarding after signup
   const [loading,setLoading]=useState(true);         // true while checking auth + loading data
   const [dbError,setDbError]=useState(null);         // surface any load errors
 
@@ -2564,7 +2725,7 @@ export default function App(){
     setLoading(true);
     try{
       const {data:prof}=await supabase.from("profiles").select("*").eq("id",uid).single();
-      if(prof) setUserProfile({name:prof.name||"",state:prof.state||"",filingStatus:prof.filing_status||"single"});
+      if(prof) setUserProfile({name:prof.name||"",state:prof.state||"",filingStatus:prof.filing_status||"single",monthlyGoal:prof.monthly_goal||5000});
       const {data:ents}=await supabase.from("entries").select("*").eq("user_id",uid).order("created_at",{ascending:false});
       setEntries((ents||[]).map(e=>({...e,amount:Number(e.amount),note:e.note||""})));
       const {data:exps}=await supabase.from("expenses").select("*").eq("user_id",uid).order("created_at",{ascending:false});
@@ -2597,7 +2758,8 @@ export default function App(){
       setUserProfile({name,state,filingStatus});
       setEntries([]);
       setExpenses([]);
-      setPage("app");
+      setIsNewUser(true);
+      setPage("onboarding");
       setLoading(false);
     }
     return{};
@@ -2754,6 +2916,38 @@ export default function App(){
       </div>
       <div style={{paddingTop:"64px"}}><LandingPage dark={dark} onEnter={()=>setPage("login")} t={t}/></div>
     </>
+  );
+
+  // ── Onboarding ──
+  if(page==="onboarding") return(
+    <OnboardingFlow
+      dark={dark}
+      userProfile={userProfile}
+      t={t}
+      addEntry={addEntry}
+      selYear={SEL_YEAR}
+      onComplete={async({goal,filingStatus,platforms})=>{
+        // Save filing status update if changed
+        if(filingStatus!==userProfile.filingStatus){
+          await updateProfile({...userProfile,filingStatus});
+        }
+        // Store goal in profile (we'll use it in the dashboard)
+        if(authUser){
+          await supabase.from("profiles").upsert({
+            id:authUser.id,
+            name:userProfile.name,
+            state:userProfile.state,
+            filing_status:filingStatus,
+            monthly_goal:parseFloat(goal)||5000,
+          });
+        }
+        setUserProfile(p=>({...p,filingStatus,monthlyGoal:parseFloat(goal)||5000}));
+        setIsNewUser(false);
+        setPage("app");
+        // Switch to monthly breakdown so they can add their first entry
+        setTimeout(()=>{},100);
+      }}
+    />
   );
 
   // ── Pricing page (standalone) ──
