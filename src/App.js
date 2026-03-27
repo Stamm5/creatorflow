@@ -1561,8 +1561,31 @@ function LoginPage({dark,onLogin,onSignUp,onGuest,t}){
   const [errMsg,setErrMsg]=useState("");
   const [showPass,setShowPass]=useState(false);
 
+  // ── Inline field errors ──
+  const [emailErr,setEmailErr]=useState("");
+  const [passErr,setPassErr]=useState("");
+
+  function validateEmail(v){
+    if(!v) return "Email is required";
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return "Invalid email address";
+    return "";
+  }
+  function validatePass(v){
+    if(!v) return "Password is required";
+    if(v.length<6) return "Password must be at least 6 characters";
+    return "";
+  }
+
   async function next(){
     setErrMsg("");
+    // Always validate email + password on login or signup step 1
+    if(mode==="login"||step===1){
+      const eErr=validateEmail(email);
+      const pErr=validatePass(pass);
+      setEmailErr(eErr);
+      setPassErr(pErr);
+      if(eErr||pErr) return;
+    }
     if(mode==="login"){
       if(!email||!pass)return;
       setLoading(true);
@@ -1570,9 +1593,11 @@ function LoginPage({dark,onLogin,onSignUp,onGuest,t}){
       if(error){setLoading(false);setErrMsg(error);return;}
       setLoading(false);setDone(true);
     } else if(step===1){
-      if(!email||!pass||!name)return; setStep(2);
+      if(!name){setErrMsg("Please enter your name");return;}
+      setEmailErr(""); setPassErr("");
+      setStep(2);
     } else {
-      if(!state)return;
+      if(!state){setErrMsg("Please select your state");return;}
       setLoading(true);
       const {error}=await onSignUp({name,email,password:pass,state,filingStatus:filing});
       if(error){setLoading(false);setErrMsg(error);return;}
@@ -1635,7 +1660,8 @@ function LoginPage({dark,onLogin,onSignUp,onGuest,t}){
               {mode==="login"&&<>
                 <div>
                   <label style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",display:"block",marginBottom:"7px"}}>Email</label>
-                  <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" type="email" style={inp}/>
+                  <input value={email} onChange={e=>{setEmail(e.target.value);setEmailErr("");}} placeholder="you@example.com" type="email" style={{...inp,border:`1.5px solid ${emailErr?t.dan:t.brd}`}}/>
+                  {emailErr&&<div style={{fontSize:"12px",color:t.dan,marginTop:"5px",fontWeight:500}}>⚠ {emailErr}</div>}
                 </div>
                 <div>
                   <label style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",display:"block",marginBottom:"7px"}}>Password</label>
@@ -1661,11 +1687,12 @@ function LoginPage({dark,onLogin,onSignUp,onGuest,t}){
                 <div>
                   <label style={{fontSize:"11px",color:t.mut,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",display:"block",marginBottom:"7px"}}>Password</label>
                   <div style={{position:"relative"}}>
-                    <input value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" type={showPass?"text":"password"} style={{...inp,paddingRight:"44px"}}/>
+                    <input value={pass} onChange={e=>{setPass(e.target.value);setPassErr("");}} placeholder="••••••••" type={showPass?"text":"password"} style={{...inp,paddingRight:"44px",border:`1.5px solid ${passErr?t.dan:t.brd}`}}/>
                     <button type="button" onClick={()=>setShowPass(v=>!v)} style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",background:"transparent",border:"none",cursor:"pointer",color:t.mut,fontSize:"16px",padding:"4px",lineHeight:1}}>
                       {showPass?"🙈":"👁"}
                     </button>
                   </div>
+                  {passErr&&<div style={{fontSize:"12px",color:t.dan,marginTop:"5px",fontWeight:500}}>⚠ {passErr}</div>}
                 </div>
               </>}
 
